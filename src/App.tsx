@@ -1,30 +1,55 @@
-import { useEffect, useMemo, useRef } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 import { gsap } from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
 
-type FeatureItem = {
+gsap.registerPlugin(ScrollTrigger);
+
+/* -------------------------------------------------------------------------- */
+/*  Types                                                                      */
+/* -------------------------------------------------------------------------- */
+
+type Benefit = {
   title: string;
   description: string;
+  icon: IconName;
 };
 
 type Plan = {
   name: string;
   price: string;
+  cadence?: string;
   description: string;
+  highlight?: boolean;
   badge?: string;
-  cta: string;
+  inherits: string;
   features: string[];
+  cta: string;
 };
 
-type Audience = {
-  title: string;
-  description: string;
+type Stat = {
+  value: number;
+  suffix: string;
+  label: string;
 };
 
-const IMAGE_PATHS = {
-  hero: "/images/fmcsa-intelligence.webp",
-  fleet: "/images/truck-fleet-night.webp",
+/* -------------------------------------------------------------------------- */
+/*  Asset paths (served from /public)                                          */
+/* -------------------------------------------------------------------------- */
+
+const IMAGES = {
+  hero: "/futuristic-truck.png",
 };
+
+/* -------------------------------------------------------------------------- */
+/*  Content (sourced from provided business data)                             */
+/* -------------------------------------------------------------------------- */
+
+const navLinks = [
+  { label: "Platform", href: "#platform" },
+  { label: "Why Us", href: "#why" },
+  { label: "Safety Reports", href: "#safety" },
+  { label: "Pricing", href: "#pricing" },
+];
 
 const subscriptionFeatures = [
   "Company Name",
@@ -39,39 +64,54 @@ const subscriptionFeatures = [
   "Unlimited Searches",
 ];
 
-const audiences: Audience[] = [
+const keyBenefits: Benefit[] = [
   {
-    title: "Insurance Agencies",
-    description: "Find active trucking companies, verify carrier risk, and support underwriting conversations.",
+    title: "Verified Contact Data",
+    description:
+      "Company names, owners, verified phone numbers, emails, and MC & DOT numbers — accurate and ready to use.",
+    icon: "badge",
   },
   {
-    title: "Permit Companies",
-    description: "Reach carriers that need operational support, authority assistance, and permit services.",
+    title: "Carrier Intelligence",
+    description:
+      "Understand authority, fleet size, and operating status before you ever make the first call.",
+    icon: "radar",
   },
   {
-    title: "Freight Brokers",
-    description: "Evaluate carrier legitimacy, operating status, and safety signals before outreach or onboarding.",
+    title: "FMCSA Safety Reports",
+    description:
+      "On-demand safety ratings, CSA scores, and risk indicators for confident carrier vetting.",
+    icon: "shield",
   },
   {
-    title: "Compliance Consultants",
-    description: "Target carriers that need compliance guidance, risk review, and safety improvement support.",
+    title: "Built-In CRM",
+    description:
+      "Track outreach, organize prospects, and manage your pipeline without leaving the platform.",
+    icon: "crm",
   },
   {
-    title: "Factoring Companies",
-    description: "Build stronger prospect lists using verified trucking company and carrier intelligence data.",
+    title: "Advanced Filters",
+    description:
+      "Target by state, fleet size, authority age, carrier type, and operating status in seconds.",
+    icon: "filter",
   },
   {
-    title: "Dispatch Providers",
-    description: "Connect with carriers that can benefit from dispatch support and operational growth services.",
+    title: "Unlimited Searches",
+    description:
+      "Build as many targeted prospect lists as you need — no caps, no per-lead fees.",
+    icon: "infinity",
   },
-  {
-    title: "Fuel Card Companies",
-    description: "Identify fleets by location, size, authority age, and operating status for targeted outreach.",
-  },
-  {
-    title: "Transportation Technology Providers",
-    description: "Sell software and operational solutions to trucking companies with better qualification data.",
-  },
+];
+
+const audiences = [
+  "Insurance Agencies",
+  "Permit Companies",
+  "Freight Brokers",
+  "Compliance Consultants",
+  "Factoring Companies",
+  "Dispatch Providers",
+  "Fuel Card Companies",
+  "Transportation Technology Providers",
 ];
 
 const searchFilters = [
@@ -85,40 +125,16 @@ const searchFilters = [
   "Carrier Type",
 ];
 
-const differenceItems: FeatureItem[] = [
-  {
-    title: "Authority Verification",
-    description:
-      "Confirm whether a carrier is active, operating, and worth contacting before your team spends time on outreach.",
-  },
-  {
-    title: "Carrier Profiles",
-    description:
-      "See company, fleet, authority, location, and carrier intelligence details in one clean profile.",
-  },
-  {
-    title: "Fleet Visibility",
-    description:
-      "Prioritize companies by fleet size and operational fit instead of calling every generic lead on a list.",
-  },
-  {
-    title: "Operational Status",
-    description:
-      "Understand carrier status and activity so sales teams can focus on real opportunities.",
-  },
-  {
-    title: "Compliance Indicators",
-    description:
-      "Use compliance and safety signals to qualify prospects with more context before the first call.",
-  },
-  {
-    title: "Growth Intelligence",
-    description:
-      "Identify carriers with signals that indicate expansion, buying intent, or stronger service demand.",
-  },
+const beyondContactData = [
+  "Authority Verification",
+  "Carrier Profiles",
+  "Fleet Visibility",
+  "Operational Status",
+  "Compliance Indicators",
+  "Growth Intelligence",
 ];
 
-const safetyReportFeatures = [
+const safetyReportIncludes = [
   "FMCSA Safety Ratings",
   "CSA Score Analysis",
   "Inspection History",
@@ -131,7 +147,7 @@ const safetyReportFeatures = [
   "Risk Mitigation Recommendations",
 ];
 
-const safetyUseCases = [
+const safetyIdealFor = [
   "Insurance Underwriting",
   "Carrier Vetting",
   "Compliance Reviews",
@@ -139,26 +155,30 @@ const safetyUseCases = [
   "Broker Due Diligence",
 ];
 
-const growthOpportunities: FeatureItem[] = [
+const growthOpportunities: Benefit[] = [
   {
     title: "Generate More Leads",
-    description: "Build a larger trucking prospect pipeline with verified company and decision-maker data.",
+    description: "Build a larger trucking prospect pipeline from verified, USA-wide carrier data.",
+    icon: "leads",
   },
   {
     title: "Prioritize Better Prospects",
-    description: "Focus on trucking companies most likely to buy your insurance, permits, compliance, software, or operations service.",
+    description: "Focus your team on the companies most likely to buy.",
+    icon: "target",
   },
   {
     title: "Access Carrier Intelligence",
-    description: "Understand who you are contacting before outreach with MC, DOT, fleet, status, and compliance context.",
+    description: "Understand exactly who you're contacting before any outreach.",
+    icon: "radar",
   },
   {
-    title: "Purchase Safety Reports On Demand",
-    description: "Gain deeper safety and risk insights whenever additional due diligence is required.",
+    title: "Safety Reports On Demand",
+    description: "Pull deeper insights whenever additional due diligence is required.",
+    icon: "shield",
   },
 ];
 
-const roiBullets = [
+const valueBenefits = [
   "Reach More Trucking Companies",
   "Connect With Decision-Makers",
   "Improve Sales Productivity",
@@ -166,18 +186,25 @@ const roiBullets = [
   "Increase Revenue Opportunities",
 ];
 
+const stats: Stat[] = [
+  { value: 50, suffix: "", label: "U.S. States Covered" },
+  { value: 8, suffix: "+", label: "Industries Served" },
+  { value: 10, suffix: "+", label: "Data Points Per Carrier" },
+  { value: 100, suffix: "%", label: "Verified Contact Records" },
+];
+
 const plans: Plan[] = [
   {
     name: "Growth Plan",
-    price: "$499/Month",
-    badge: "Best for growing teams",
-    description:
-      "Designed for growing sales teams that need larger outreach capabilities and verified trucking prospect data.",
-    cta: "Book Demo",
+    price: "$499",
+    cadence: "/month",
+    description: "Designed for growing sales teams that need larger outreach capabilities.",
+    highlight: true,
+    badge: "Most Popular",
+    inherits: "Everything in Starter, plus:",
     features: [
       "Verified Trucking Company Database",
-      "Phone Numbers",
-      "Email Addresses",
+      "Phone Numbers & Email Addresses",
       "MC & DOT Information",
       "Fleet Information",
       "Unlimited Searches",
@@ -185,22 +212,20 @@ const plans: Plan[] = [
       "Advanced Search Filters",
       "Ongoing Data Updates",
       "Additional User Seats",
-      "Advanced Search Capabilities",
       "Priority Support",
       "Expanded Data Access",
-      "Enhanced CRM Features",
       "Lead Export Options",
     ],
+    cta: "Book Demo",
   },
   {
     name: "Carrier Intelligence Plan",
-    price: "Custom Pricing",
-    badge: "Advanced intelligence",
+    price: "Custom",
+    cadence: "pricing",
     description:
       "For organizations requiring advanced carrier intelligence, safety analysis, and large-scale outreach.",
-    cta: "Get A Quote",
+    inherits: "Everything in Growth, plus:",
     features: [
-      "Everything In Growth",
       "Detailed Carrier Safety Reports",
       "FMCSA Safety Intelligence",
       "CSA Score Analysis",
@@ -212,1705 +237,1115 @@ const plans: Plan[] = [
       "Custom Data Requirements",
       "Team Training & Onboarding",
     ],
+    cta: "Get a Quote",
   },
 ];
 
-const faqs = [
-  {
-    question: "Who is TruckMind built for?",
-    answer:
-      "TruckMind is built for insurance agencies, permit companies, freight brokers, compliance consultants, factoring companies, dispatch providers, fuel card companies, and transportation technology providers selling into the trucking industry.",
-  },
-  {
-    question: "What data is included in the subscription?",
-    answer:
-      "The subscription includes verified trucking company data such as company names, owner information, phone numbers, email addresses, MC and DOT numbers, fleet information, location data, search filters, built-in CRM access, and unlimited searches.",
-  },
-  {
-    question: "How is TruckMind different from a basic lead list?",
-    answer:
-      "Most lead providers only provide contact information. TruckMind adds carrier intelligence, authority verification, fleet visibility, operational status, compliance indicators, and growth intelligence so your team understands who they are contacting before outreach.",
-  },
-  {
-    question: "Can I purchase detailed safety reports?",
-    answer:
-      "Yes. TruckMind supports on-demand carrier safety reports with FMCSA ratings, CSA score analysis, inspection history, out-of-service rates, authority verification, carrier risk indicators, fraud and double-brokering signals, safety summaries, and risk mitigation recommendations.",
-  },
-];
+const footerLinks = {
+  Platform: [
+    { label: "Verified Leads", href: "#platform" },
+    { label: "Carrier Intelligence", href: "#why" },
+    { label: "Safety Reports", href: "#safety" },
+    { label: "Pricing", href: "#pricing" },
+  ],
+  Company: [
+    { label: "About", href: "#why" },
+    { label: "Who It's For", href: "#audiences" },
+    { label: "Book a Demo", href: "#cta" },
+    { label: "Free Trial", href: "#cta" },
+  ],
+};
 
-function CheckIcon() {
+/* -------------------------------------------------------------------------- */
+/*  Icons                                                                      */
+/* -------------------------------------------------------------------------- */
+
+type IconName =
+  | "badge"
+  | "radar"
+  | "shield"
+  | "crm"
+  | "filter"
+  | "infinity"
+  | "leads"
+  | "target"
+  | "check"
+  | "truck"
+  | "arrow";
+
+function Icon({ name, className = "h-6 w-6" }: { name: IconName; className?: string }) {
+  const common = {
+    className,
+    viewBox: "0 0 24 24",
+    fill: "none",
+    stroke: "currentColor",
+    strokeWidth: 1.6,
+    strokeLinecap: "round" as const,
+    strokeLinejoin: "round" as const,
+    "aria-hidden": true,
+  };
+  switch (name) {
+    case "badge":
+      return (
+        <svg {...common}>
+          <path d="M12 2 4 5v6c0 5 3.5 8 8 11 4.5-3 8-6 8-11V5l-8-3Z" />
+          <path d="m9 12 2 2 4-4" />
+        </svg>
+      );
+    case "radar":
+      return (
+        <svg {...common}>
+          <path d="M19.07 4.93A10 10 0 1 0 22 12" />
+          <path d="M12 12 19 5" />
+          <circle cx="12" cy="12" r="4" />
+          <circle cx="12" cy="12" r="1.2" fill="currentColor" />
+        </svg>
+      );
+    case "shield":
+      return (
+        <svg {...common}>
+          <path d="M12 2 4 5v6c0 5 3.5 8 8 11 4.5-3 8-6 8-11V5l-8-3Z" />
+          <path d="M12 8v4" />
+          <path d="M12 16h.01" />
+        </svg>
+      );
+    case "crm":
+      return (
+        <svg {...common}>
+          <rect x="3" y="4" width="18" height="16" rx="2" />
+          <path d="M3 9h18M8 4v16" />
+        </svg>
+      );
+    case "filter":
+      return (
+        <svg {...common}>
+          <path d="M3 5h18l-7 8v6l-4-2v-4L3 5Z" />
+        </svg>
+      );
+    case "infinity":
+      return (
+        <svg {...common}>
+          <path d="M6.5 8C4 8 2 9.8 2 12s2 4 4.5 4 3.5-2 5.5-4 3-4 5.5-4S22 9.8 22 12s-2 4-4.5 4-3.5-2-5.5-4" />
+        </svg>
+      );
+    case "leads":
+      return (
+        <svg {...common}>
+          <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" />
+          <circle cx="9" cy="7" r="4" />
+          <path d="M19 8v6M22 11h-6" />
+        </svg>
+      );
+    case "target":
+      return (
+        <svg {...common}>
+          <circle cx="12" cy="12" r="9" />
+          <circle cx="12" cy="12" r="5" />
+          <circle cx="12" cy="12" r="1.4" fill="currentColor" />
+        </svg>
+      );
+    case "truck":
+      return (
+        <svg {...common}>
+          <path d="M2 6h11v9H2zM13 9h4l3 3v3h-7z" />
+          <circle cx="6.5" cy="17.5" r="1.8" />
+          <circle cx="17" cy="17.5" r="1.8" />
+        </svg>
+      );
+    case "arrow":
+      return (
+        <svg {...common}>
+          <path d="M5 12h14M13 6l6 6-6 6" />
+        </svg>
+      );
+    case "check":
+    default:
+      return (
+        <svg {...common}>
+          <path d="m5 12 5 5L20 7" />
+        </svg>
+      );
+  }
+}
+
+/* -------------------------------------------------------------------------- */
+/*  Reusable UI primitives                                                     */
+/* -------------------------------------------------------------------------- */
+
+function CheckItem({ children, animate }: { children: ReactNode; animate?: boolean }) {
   return (
-    <svg viewBox="0 0 20 20" aria-hidden="true">
-      <path d="M8.1 14.7 3.8 10.4l1.4-1.4 2.9 2.9 6.7-6.7 1.4 1.4-8.1 8.1Z" />
-    </svg>
+    <li
+      data-animate={animate ? "" : undefined}
+      className="flex items-center gap-3 text-sm text-slate-300"
+    >
+      <span className="grid h-6 w-6 shrink-0 place-items-center rounded-full bg-brand-500/15 text-brand-300 ring-1 ring-brand-400/30">
+        <Icon name="check" className="h-3.5 w-3.5" />
+      </span>
+      <span>{children}</span>
+    </li>
   );
 }
 
-function ArrowIcon() {
+function SectionHeading({
+  eyebrow,
+  title,
+  subtitle,
+  align = "center",
+}: {
+  eyebrow?: string;
+  title: ReactNode;
+  subtitle?: ReactNode;
+  align?: "center" | "left";
+}) {
   return (
-    <svg viewBox="0 0 24 24" aria-hidden="true">
-      <path d="M13.5 5 20.5 12l-7 7-1.4-1.45L16.65 13H3.5v-2h13.15L12.1 6.45 13.5 5Z" />
-    </svg>
+    <div
+      className={`max-w-3xl ${align === "center" ? "mx-auto text-center" : "text-left"}`}
+    >
+      {eyebrow && (
+        <span
+          data-animate
+          className="inline-block rounded-full border border-brand-400/25 bg-brand-500/10 px-4 py-1.5 text-xs font-semibold uppercase tracking-[0.18em] text-brand-300"
+        >
+          {eyebrow}
+        </span>
+      )}
+      <h2
+        data-animate
+        className="mt-5 text-3xl font-bold leading-tight text-white sm:text-4xl md:text-[2.6rem]"
+      >
+        {title}
+      </h2>
+      {subtitle && (
+        <p data-animate className="mt-4 text-base leading-relaxed text-slate-400 sm:text-lg">
+          {subtitle}
+        </p>
+      )}
+    </div>
   );
 }
 
-function SignalIcon() {
+type CTAProps = {
+  children: ReactNode;
+  href?: string;
+  variant?: "primary" | "secondary" | "ghost";
+  className?: string;
+  withArrow?: boolean;
+};
+
+function CTAButton({
+  children,
+  href = "#cta",
+  variant = "primary",
+  className = "",
+  withArrow,
+}: CTAProps) {
+  const base =
+    "group inline-flex items-center justify-center gap-2 rounded-full px-7 py-3.5 text-sm font-semibold transition-all duration-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-400 focus-visible:ring-offset-2 focus-visible:ring-offset-ink-950";
+  const variants = {
+    primary:
+      "bg-gradient-to-r from-brand-500 to-brand-400 text-ink-950 shadow-[0_12px_40px_-12px_rgba(14,165,233,0.7)] hover:shadow-[0_18px_50px_-12px_rgba(14,165,233,0.85)] hover:-translate-y-0.5",
+    secondary:
+      "glass text-white hover:bg-white/10 hover:-translate-y-0.5",
+    ghost: "text-slate-300 hover:text-white",
+  };
   return (
-    <svg viewBox="0 0 24 24" aria-hidden="true">
-      <path d="M4 19h3V9H4v10Zm6 0h3V5h-3v14Zm6 0h3v-7h-3v7Z" />
-    </svg>
+    <a href={href} className={`${base} ${variants[variant]} ${className}`}>
+      {children}
+      {withArrow && (
+        <Icon
+          name="arrow"
+          className="h-4 w-4 transition-transform duration-300 group-hover:translate-x-1"
+        />
+      )}
+    </a>
   );
 }
 
-function ShieldIcon() {
-  return (
-    <svg viewBox="0 0 24 24" aria-hidden="true">
-      <path d="M12 2 4.5 5.2v6.7c0 4.8 3.2 9.2 7.5 10.1 4.3-.9 7.5-5.3 7.5-10.1V5.2L12 2Zm0 2.2 5.5 2.35v5.35c0 3.75-2.25 7.1-5.5 8.05-3.25-.95-5.5-4.3-5.5-8.05V6.55L12 4.2Z" />
-    </svg>
-  );
-}
+/* -------------------------------------------------------------------------- */
+/*  Animated counter                                                           */
+/* -------------------------------------------------------------------------- */
 
-function SearchIcon() {
-  return (
-    <svg viewBox="0 0 24 24" aria-hidden="true">
-      <path d="m20.5 19.1-4.7-4.7a7.2 7.2 0 1 0-1.4 1.4l4.7 4.7 1.4-1.4ZM5 10.2a5.2 5.2 0 1 1 10.4 0 5.2 5.2 0 0 1-10.4 0Z" />
-    </svg>
-  );
-}
-
-function App() {
-  const rootRef = useRef<HTMLDivElement | null>(null);
-
-  const softwareSchema = useMemo(
-    () => ({
-      "@context": "https://schema.org",
-      "@type": "SoftwareApplication",
-      name: "TruckMind",
-      applicationCategory: "BusinessApplication",
-      operatingSystem: "Web",
-      description:
-        "TruckMind is a trucking growth intelligence platform for verified trucking prospects, safety intelligence, compliance data, carrier profiles, and on-demand carrier safety reports.",
-      offers: [
-        {
-          "@type": "Offer",
-          name: "Growth Plan",
-          price: "499",
-          priceCurrency: "USD",
-          availability: "https://schema.org/InStock",
-        },
-        {
-          "@type": "Offer",
-          name: "Carrier Intelligence Plan",
-          price: "Custom",
-          priceCurrency: "USD",
-          availability: "https://schema.org/InStock",
-        },
-      ],
-      audience: {
-        "@type": "Audience",
-        audienceType:
-          "Insurance agencies, permit companies, freight brokers, compliance consultants, factoring companies, dispatch providers, fuel card companies, and transportation technology providers",
-      },
-    }),
-    []
-  );
-
-  const faqSchema = useMemo(
-    () => ({
-      "@context": "https://schema.org",
-      "@type": "FAQPage",
-      mainEntity: faqs.map((faq) => ({
-        "@type": "Question",
-        name: faq.question,
-        acceptedAnswer: {
-          "@type": "Answer",
-          text: faq.answer,
-        },
-      })),
-    }),
-    []
-  );
+function Counter({ value, suffix }: { value: number; suffix: string }) {
+  const ref = useRef<HTMLSpanElement>(null);
 
   useEffect(() => {
-    document.title = "TruckMind | Verified Trucking Prospects, FMCSA Safety Intelligence & Compliance Data";
-
-    const setMeta = (name: string, content: string, attr: "name" | "property" = "name") => {
-      let meta = document.querySelector(`meta[${attr}="${name}"]`) as HTMLMetaElement | null;
-      if (!meta) {
-        meta = document.createElement("meta");
-        meta.setAttribute(attr, name);
-        document.head.appendChild(meta);
-      }
-      meta.content = content;
+    const el = ref.current;
+    if (!el) return;
+    const obj = { n: 0 };
+    const tween = gsap.to(obj, {
+      n: value,
+      duration: 2,
+      ease: "power2.out",
+      scrollTrigger: { trigger: el, start: "top 85%", once: true },
+      onUpdate: () => {
+        el.textContent = Math.round(obj.n).toString() + suffix;
+      },
+    });
+    return () => {
+      tween.scrollTrigger?.kill();
+      tween.kill();
     };
+  }, [value, suffix]);
 
-    setMeta(
-      "description",
-      "TruckMind helps insurance agencies, freight brokers, permit companies, compliance consultants, factoring companies, dispatch providers, fuel card companies, and transportation tech providers access verified trucking prospects, FMCSA safety intelligence, compliance data, carrier profiles, and on-demand safety reports."
-    );
-    setMeta(
-      "keywords",
-      "trucking leads, verified carrier contacts, FMCSA safety intelligence, trucking company database, carrier safety reports, DOT number lookup, MC number data, trucking CRM, carrier compliance data, trucking prospecting platform"
-    );
-    setMeta("robots", "index, follow");
-    setMeta("og:title", "TruckMind | Verified Trucking Prospects + Safety Intelligence", "property");
-    setMeta(
-      "og:description",
-      "Find verified trucking companies, connect with decision-makers, access carrier intelligence, and purchase detailed carrier safety reports on demand.",
-      "property"
-    );
-    setMeta("og:type", "website", "property");
-    setMeta("og:image", "/images/fmcsa-intelligence.webp", "property");
-    setMeta("twitter:card", "summary_large_image");
-    setMeta("twitter:title", "TruckMind | Trucking Growth Intelligence Platform");
-    setMeta(
-      "twitter:description",
-      "Verified trucking prospects, FMCSA safety intelligence, compliance data, built-in CRM access, and detailed carrier safety reports.",
-    );
-    setMeta("twitter:image", "/images/fmcsa-intelligence.webp");
+  return <span ref={ref}>0{suffix}</span>;
+}
 
-    gsap.registerPlugin(ScrollTrigger);
+/* -------------------------------------------------------------------------- */
+/*  Decorative background                                                      */
+/* -------------------------------------------------------------------------- */
+
+function GridGlow() {
+  return (
+    <div aria-hidden className="pointer-events-none absolute inset-0 -z-10 overflow-hidden">
+      <div className="absolute left-1/2 top-[-10%] h-[480px] w-[480px] -translate-x-1/2 rounded-full bg-brand-500/20 blur-[140px]" />
+      <div className="absolute right-[-5%] top-1/3 h-[360px] w-[360px] rounded-full bg-accent-500/10 blur-[150px]" />
+      <div className="absolute bottom-0 left-[-5%] h-[320px] w-[320px] rounded-full bg-brand-600/10 blur-[140px]" />
+      <div
+        className="absolute inset-0 opacity-[0.04]"
+        style={{
+          backgroundImage:
+            "linear-gradient(rgba(148,163,184,0.6) 1px, transparent 1px), linear-gradient(90deg, rgba(148,163,184,0.6) 1px, transparent 1px)",
+          backgroundSize: "56px 56px",
+          maskImage: "radial-gradient(ellipse 70% 60% at 50% 30%, black, transparent)",
+        }}
+      />
+    </div>
+  );
+}
+
+/* -------------------------------------------------------------------------- */
+/*  Navbar                                                                     */
+/* -------------------------------------------------------------------------- */
+
+function Navbar() {
+  const [scrolled, setScrolled] = useState(false);
+  const [open, setOpen] = useState(false);
+
+  useEffect(() => {
+    const onScroll = () => setScrolled(window.scrollY > 24);
+    onScroll();
+    window.addEventListener("scroll", onScroll, { passive: true });
+    return () => window.removeEventListener("scroll", onScroll);
+  }, []);
+
+  return (
+    <header
+      className={`fixed inset-x-0 top-0 z-50 transition-all duration-300 ${
+        scrolled
+          ? "border-b border-white/10 bg-ink-950/80 backdrop-blur-xl"
+          : "border-b border-transparent bg-transparent"
+      }`}
+    >
+      <nav
+        className="flex w-full items-center justify-between px-5 py-4 sm:px-8 lg:px-12"
+        aria-label="Primary"
+      >
+        <a href="#top" className="flex items-center gap-2.5">
+          <span className="grid h-9 w-9 place-items-center rounded-xl bg-gradient-to-br from-brand-500 to-brand-600 text-ink-950 shadow-[0_8px_24px_-8px_rgba(14,165,233,0.8)]">
+            <Icon name="truck" className="h-5 w-5" />
+          </span>
+          <span className="text-lg font-bold tracking-tight text-white">TruckMind</span>
+        </a>
+
+        <div className="hidden items-center gap-8 md:flex">
+          {navLinks.map((link) => (
+            <a
+              key={link.href}
+              href={link.href}
+              className="text-sm font-medium text-slate-300 transition-colors hover:text-white"
+            >
+              {link.label}
+            </a>
+          ))}
+        </div>
+
+        <div className="hidden items-center gap-3 md:flex">
+          <CTAButton href="#cta" variant="ghost" className="px-4 py-2">
+            Book Demo
+          </CTAButton>
+          <CTAButton href="#cta" className="px-5 py-2.5">
+            Start Free Trial
+          </CTAButton>
+        </div>
+
+        <button
+          type="button"
+          onClick={() => setOpen((v) => !v)}
+          className="grid h-10 w-10 place-items-center rounded-lg glass text-white md:hidden"
+          aria-label="Toggle navigation menu"
+          aria-expanded={open}
+        >
+          <span className="space-y-1.5">
+            <span
+              className={`block h-0.5 w-5 bg-white transition-transform ${open ? "translate-y-2 rotate-45" : ""}`}
+            />
+            <span className={`block h-0.5 w-5 bg-white transition-opacity ${open ? "opacity-0" : ""}`} />
+            <span
+              className={`block h-0.5 w-5 bg-white transition-transform ${open ? "-translate-y-2 -rotate-45" : ""}`}
+            />
+          </span>
+        </button>
+      </nav>
+
+      {open && (
+        <div className="border-t border-white/10 bg-ink-950/95 px-5 py-4 backdrop-blur-xl md:hidden">
+          <div className="flex flex-col gap-1">
+            {navLinks.map((link) => (
+              <a
+                key={link.href}
+                href={link.href}
+                onClick={() => setOpen(false)}
+                className="rounded-lg px-3 py-2.5 text-sm font-medium text-slate-300 hover:bg-white/5 hover:text-white"
+              >
+                {link.label}
+              </a>
+            ))}
+            <CTAButton href="#cta" className="mt-3 w-full">
+              Start Free Trial
+            </CTAButton>
+          </div>
+        </div>
+      )}
+    </header>
+  );
+}
+
+/* -------------------------------------------------------------------------- */
+/*  Hero                                                                       */
+/* -------------------------------------------------------------------------- */
+
+function Hero() {
+  return (
+    <section
+      id="top"
+      className="relative isolate flex min-h-screen items-center justify-center overflow-hidden"
+    >
+      {/* Full-bleed background image */}
+      <div aria-hidden className="absolute inset-0 -z-10">
+        <img
+          src={IMAGES.hero}
+          alt=""
+          fetchPriority="high"
+          decoding="async"
+          className="h-full w-full object-cover object-center"
+        />
+        {/* Lighter overlays: keep the truck visible while text stays legible */}
+        <div className="absolute inset-0 bg-gradient-to-b from-ink-950/55 via-ink-950/35 to-ink-950" />
+        <div className="absolute inset-0 bg-[radial-gradient(ellipse_60%_55%_at_50%_45%,rgba(5,7,13,0.55),transparent_75%)]" />
+        <div className="absolute left-1/2 top-1/3 h-[460px] w-[460px] -translate-x-1/2 rounded-full bg-brand-500/10 blur-[160px]" />
+      </div>
+
+      <div className="mx-auto max-w-4xl px-5 pt-32 pb-24 text-center sm:px-8 sm:pt-36">
+        <span
+          data-hero
+          className="inline-flex items-center gap-2 rounded-full border border-brand-400/30 bg-brand-500/10 px-4 py-1.5 text-xs font-semibold uppercase tracking-[0.18em] text-brand-300 backdrop-blur-sm"
+        >
+          <span className="h-1.5 w-1.5 rounded-full bg-brand-400" />
+          Trucking Growth Intelligence Platform
+        </span>
+
+        <h1
+          data-hero
+          className="mx-auto mt-7 max-w-3xl text-4xl font-extrabold leading-[1.08] text-white drop-shadow-[0_2px_24px_rgba(0,0,0,0.5)] sm:text-5xl lg:text-6xl"
+        >
+          Get Verified Trucking Prospects,{" "}
+          <span className="text-gradient">Safety Intelligence</span> &amp; Compliance Data
+        </h1>
+
+        <p
+          data-hero
+          className="mx-auto mt-6 max-w-2xl text-lg leading-relaxed text-slate-300"
+        >
+          Access verified trucking company contacts, decision-makers, and carrier intelligence from
+          a single platform — built for teams that sell into the trucking industry and want to grow
+          faster.
+        </p>
+
+        <div
+          data-hero
+          className="mt-9 flex flex-col items-center justify-center gap-3 sm:flex-row"
+        >
+          <CTAButton href="#cta" withArrow>
+            Start Your 7-Day Free Trial
+          </CTAButton>
+          <CTAButton href="#cta" variant="secondary">
+            Book Demo
+          </CTAButton>
+        </div>
+
+        <div
+          data-hero
+          className="mt-8 flex flex-wrap items-center justify-center gap-x-6 gap-y-2 text-sm text-slate-400"
+        >
+          <span className="flex items-center gap-2">
+            <Icon name="check" className="h-4 w-4 text-brand-400" /> No credit card required
+          </span>
+          <span className="flex items-center gap-2">
+            <Icon name="check" className="h-4 w-4 text-brand-400" /> Verified USA-wide data
+          </span>
+        </div>
+      </div>
+
+      {/* Scroll cue */}
+      <a
+        href="#platform"
+        aria-label="Scroll to platform section"
+        className="absolute bottom-8 left-1/2 hidden -translate-x-1/2 sm:block"
+      >
+        <span className="grid h-10 w-6 place-items-start rounded-full border border-white/25 p-1.5">
+          <span className="h-2 w-1 animate-bounce rounded-full bg-white/70" />
+        </span>
+      </a>
+    </section>
+  );
+}
+
+/* -------------------------------------------------------------------------- */
+/*  Section: Platform / Included In Subscription                               */
+/* -------------------------------------------------------------------------- */
+
+function PlatformSection() {
+  return (
+    <section id="platform" className="relative py-20 sm:py-28">
+      <div className="mx-auto max-w-7xl px-5 sm:px-8">
+        <SectionHeading
+          eyebrow="USA-Wide Coverage"
+          title={
+            <>
+              Access Verified Trucking Companies{" "}
+              <span className="text-gradient">Across the USA</span>
+            </>
+          }
+          subtitle="Built for insurance agencies, permit companies, freight brokers, compliance consultants, factoring companies, dispatch providers, fuel card companies, and transportation technology providers looking to grow faster."
+        />
+
+        <div className="mx-auto mt-14 max-w-5xl rounded-3xl glass p-8 sm:p-10">
+          <h3 className="text-center text-xl font-semibold text-white">
+            Included in Your Subscription
+          </h3>
+          <p className="mx-auto mt-2 max-w-xl text-center text-sm text-slate-400">
+            Everything your team needs to identify, reach, and convert trucking companies.
+          </p>
+          <ul className="mx-auto mt-8 grid max-w-3xl gap-x-8 gap-y-4 sm:grid-cols-2">
+            {subscriptionFeatures.map((item) => (
+              <CheckItem key={item} animate>
+                {item}
+              </CheckItem>
+            ))}
+          </ul>
+        </div>
+      </div>
+    </section>
+  );
+}
+
+/* -------------------------------------------------------------------------- */
+/*  Section: Key Benefits                                                      */
+/* -------------------------------------------------------------------------- */
+
+function BenefitsSection() {
+  return (
+    <section className="relative py-20 sm:py-28">
+      <div className="mx-auto max-w-7xl px-5 sm:px-8">
+        <SectionHeading
+          eyebrow="One Platform"
+          title={
+            <>
+              Everything You Need to <span className="text-gradient">Grow Faster</span>
+            </>
+          }
+          subtitle="TruckMind helps companies selling into the trucking industry identify, connect with, and convert more trucking companies."
+        />
+
+        <div className="mt-14 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+          {keyBenefits.map((b) => (
+            <article
+              key={b.title}
+              data-animate
+              className="group relative overflow-hidden rounded-2xl glass p-7 transition-all duration-300 hover:-translate-y-1.5 hover:border-brand-400/30"
+            >
+              <div className="absolute inset-x-0 -top-px h-px bg-gradient-to-r from-transparent via-brand-400/50 to-transparent opacity-0 transition-opacity duration-300 group-hover:opacity-100" />
+              <span className="grid h-12 w-12 place-items-center rounded-xl bg-brand-500/15 text-brand-300 ring-1 ring-brand-400/25 transition-transform duration-300 group-hover:scale-110">
+                <Icon name={b.icon} />
+              </span>
+              <h3 className="mt-5 text-lg font-semibold text-white">{b.title}</h3>
+              <p className="mt-2 text-sm leading-relaxed text-slate-400">{b.description}</p>
+            </article>
+          ))}
+        </div>
+      </div>
+    </section>
+  );
+}
+
+/* -------------------------------------------------------------------------- */
+/*  Section: Audiences (Perfect For)                                           */
+/* -------------------------------------------------------------------------- */
+
+function AudienceSection() {
+  return (
+    <section id="audiences" className="relative py-20 sm:py-28">
+      <div className="mx-auto max-w-7xl px-5 sm:px-8">
+        <SectionHeading
+          eyebrow="Trusted By Businesses Serving Trucking"
+          title={
+            <>
+              Perfect For Teams That <span className="text-gradient">Sell Into Trucking</span>
+            </>
+          }
+        />
+        <div className="mt-12 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+          {audiences.map((a) => (
+            <div
+              key={a}
+              data-animate
+              className="flex items-center gap-3 rounded-xl glass px-5 py-4 transition-all duration-300 hover:-translate-y-1 hover:border-brand-400/30"
+            >
+              <span className="grid h-8 w-8 shrink-0 place-items-center rounded-lg bg-accent-500/15 text-accent-400 ring-1 ring-accent-400/25">
+                <Icon name="check" className="h-4 w-4" />
+              </span>
+              <span className="text-sm font-medium text-slate-200">{a}</span>
+            </div>
+          ))}
+        </div>
+      </div>
+    </section>
+  );
+}
+
+/* -------------------------------------------------------------------------- */
+/*  Section: Find Prospects In Seconds (search filters)                        */
+/* -------------------------------------------------------------------------- */
+
+function SearchSection() {
+  return (
+    <section className="relative py-20 sm:py-28">
+      <div className="mx-auto max-w-7xl px-5 sm:px-8">
+        <div className="grid gap-12 lg:grid-cols-2 lg:items-center">
+          <div>
+            <SectionHeading
+              align="left"
+              eyebrow="Lightning-Fast Search"
+              title={
+                <>
+                  Find the Right Prospects <span className="text-gradient">in Seconds</span>
+                </>
+              }
+              subtitle="Build targeted prospect lists in minutes instead of spending hours searching multiple sources. Search and filter trucking companies by:"
+            />
+            <ul className="mt-8 grid gap-x-6 gap-y-3.5 sm:grid-cols-2">
+              {searchFilters.map((f) => (
+                <CheckItem key={f} animate>
+                  {f}
+                </CheckItem>
+              ))}
+            </ul>
+          </div>
+
+          {/* Mock search UI */}
+          <div data-animate className="rounded-3xl glass p-6 sm:p-8 glow-ring">
+            <div className="flex items-center gap-3 rounded-xl border border-white/10 bg-ink-900/60 px-4 py-3">
+              <Icon name="filter" className="h-5 w-5 text-brand-300" />
+              <span className="text-sm text-slate-400">Search carriers…</span>
+            </div>
+            <div className="mt-5 flex flex-wrap gap-2">
+              {searchFilters.map((f, i) => (
+                <span
+                  key={f}
+                  className={`rounded-full px-3.5 py-1.5 text-xs font-medium ${
+                    i % 3 === 0
+                      ? "bg-brand-500/20 text-brand-200 ring-1 ring-brand-400/30"
+                      : "bg-white/5 text-slate-300 ring-1 ring-white/10"
+                  }`}
+                >
+                  {f}
+                </span>
+              ))}
+            </div>
+            <div className="mt-6 space-y-3">
+              {["Midwest Logistics LLC", "Apex Freight Carriers", "Summit Haul Transport"].map(
+                (name, i) => (
+                  <div
+                    key={name}
+                    className="flex items-center justify-between rounded-xl border border-white/10 bg-ink-900/40 px-4 py-3"
+                  >
+                    <div className="flex items-center gap-3">
+                      <span className="grid h-9 w-9 place-items-center rounded-lg bg-brand-500/15 text-brand-300">
+                        <Icon name="truck" className="h-4 w-4" />
+                      </span>
+                      <div>
+                        <p className="text-sm font-medium text-white">{name}</p>
+                        <p className="text-xs text-slate-500">
+                          MC #{(1024 + i * 317).toString()} · {6 + i * 4} trucks
+                        </p>
+                      </div>
+                    </div>
+                    <span className="rounded-full bg-emerald-500/15 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-wide text-emerald-300">
+                      Active
+                    </span>
+                  </div>
+                ),
+              )}
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+  );
+}
+
+/* -------------------------------------------------------------------------- */
+/*  Section: Why TruckMind Is Different                                        */
+/* -------------------------------------------------------------------------- */
+
+function WhySection() {
+  return (
+    <section id="why" className="relative py-20 sm:py-28">
+      <div className="mx-auto max-w-7xl px-5 sm:px-8">
+        <SectionHeading
+          eyebrow="Why TruckMind Is Different"
+          title={
+            <>
+              Know Who You're Contacting{" "}
+              <span className="text-gradient">Before the First Call</span>
+            </>
+          }
+          subtitle="Most trucking lead providers only give you contact information. TruckMind helps you understand the carrier — so your team focuses on better opportunities and improves conversion rates."
+        />
+
+        <div className="mt-14 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+          {beyondContactData.map((item) => (
+            <article
+              key={item}
+              data-animate
+              className="group flex items-center gap-4 rounded-2xl glass p-6 transition-all duration-300 hover:-translate-y-1.5 hover:border-brand-400/30"
+            >
+              <span className="grid h-11 w-11 shrink-0 place-items-center rounded-xl bg-brand-500/15 text-brand-300 ring-1 ring-brand-400/25 transition-transform duration-300 group-hover:scale-110">
+                <Icon name="check" className="h-5 w-5" />
+              </span>
+              <h3 className="text-base font-semibold text-white">{item}</h3>
+            </article>
+          ))}
+        </div>
+      </div>
+    </section>
+  );
+}
+
+/* -------------------------------------------------------------------------- */
+/*  Section: Safety Reports                                                    */
+/* -------------------------------------------------------------------------- */
+
+function SafetySection() {
+  return (
+    <section id="safety" className="relative py-20 sm:py-28">
+      <div className="mx-auto max-w-7xl px-5 sm:px-8">
+        <SectionHeading
+          eyebrow="Need More Than Leads?"
+          title={
+            <>
+              Upgrade With Detailed{" "}
+              <span className="text-gradient">Carrier Safety Reports</span>
+            </>
+          }
+          subtitle="For insurance agencies, brokers, compliance consultants, permit companies, and underwriting teams, understanding carrier risk is just as important as finding carrier contacts."
+        />
+
+        <div className="mt-14 grid gap-6 lg:grid-cols-[1.4fr_1fr]">
+          <div data-animate className="rounded-3xl glass p-8 sm:p-10">
+            <h3 className="text-xl font-semibold text-white">Detailed Safety Reports Include</h3>
+            <ul className="mt-6 grid gap-x-6 gap-y-3.5 sm:grid-cols-2">
+              {safetyReportIncludes.map((item) => (
+                <CheckItem key={item} animate>
+                  {item}
+                </CheckItem>
+              ))}
+            </ul>
+          </div>
+
+          <div
+            data-animate
+            className="rounded-3xl border border-accent-400/20 bg-gradient-to-br from-accent-500/10 to-transparent p-8 sm:p-10"
+          >
+            <span className="grid h-12 w-12 place-items-center rounded-xl bg-accent-500/15 text-accent-400 ring-1 ring-accent-400/25">
+              <Icon name="shield" />
+            </span>
+            <h3 className="mt-5 text-xl font-semibold text-white">Ideal For</h3>
+            <ul className="mt-5 space-y-3.5">
+              {safetyIdealFor.map((item) => (
+                <li key={item} className="flex items-center gap-3 text-sm text-slate-300">
+                  <span className="h-1.5 w-1.5 rounded-full bg-accent-400" />
+                  {item}
+                </li>
+              ))}
+            </ul>
+          </div>
+        </div>
+      </div>
+    </section>
+  );
+}
+
+/* -------------------------------------------------------------------------- */
+/*  Section: Growth Opportunities                                              */
+/* -------------------------------------------------------------------------- */
+
+function GrowthSection() {
+  return (
+    <section className="relative py-20 sm:py-28">
+      <div className="mx-auto max-w-7xl px-5 sm:px-8">
+        <SectionHeading
+          eyebrow="Solutions"
+          title={
+            <>
+              One Platform.{" "}
+              <span className="text-gradient">Multiple Growth Opportunities.</span>
+            </>
+          }
+        />
+        <div className="mt-14 grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
+          {growthOpportunities.map((g, i) => (
+            <article
+              key={g.title}
+              data-animate
+              className="group relative overflow-hidden rounded-2xl glass p-7 transition-all duration-300 hover:-translate-y-1.5 hover:border-brand-400/30"
+            >
+              <span className="text-5xl font-bold text-white/5">{`0${i + 1}`}</span>
+              <span className="absolute right-6 top-6 grid h-11 w-11 place-items-center rounded-xl bg-brand-500/15 text-brand-300 ring-1 ring-brand-400/25 transition-transform duration-300 group-hover:scale-110">
+                <Icon name={g.icon} />
+              </span>
+              <h3 className="mt-4 text-lg font-semibold text-white">{g.title}</h3>
+              <p className="mt-2 text-sm leading-relaxed text-slate-400">{g.description}</p>
+            </article>
+          ))}
+        </div>
+      </div>
+    </section>
+  );
+}
+
+/* -------------------------------------------------------------------------- */
+/*  Section: Stats / ROI                                                       */
+/* -------------------------------------------------------------------------- */
+
+function StatsSection() {
+  return (
+    <section className="relative py-20 sm:py-24">
+      <div className="mx-auto max-w-7xl px-5 sm:px-8">
+        <div className="relative overflow-hidden rounded-[2rem] border border-white/10 bg-gradient-to-br from-ink-800 to-ink-900 p-10 sm:p-14">
+          <div
+            aria-hidden
+            className="absolute right-[-10%] top-[-30%] h-72 w-72 rounded-full bg-brand-500/20 blur-[120px]"
+          />
+          <div className="relative grid gap-12 lg:grid-cols-[1fr_1.1fr] lg:items-center">
+            <div>
+              <SectionHeading
+                align="left"
+                eyebrow="Real ROI"
+                title={
+                  <>
+                    One New Client Can Pay for TruckMind{" "}
+                    <span className="text-gradient">Many Times Over</span>
+                  </>
+                }
+                subtitle="A single trucking customer can generate thousands of dollars through insurance, permits, compliance, dispatch, factoring, and software — TruckMind helps you find those opportunities faster."
+              />
+              <ul className="mt-7 grid gap-3 sm:grid-cols-2">
+                {valueBenefits.map((v) => (
+                  <CheckItem key={v} animate>
+                    {v}
+                  </CheckItem>
+                ))}
+              </ul>
+            </div>
+
+            <div className="grid grid-cols-2 gap-5">
+              {stats.map((s) => (
+                <div
+                  key={s.label}
+                  data-animate
+                  className="rounded-2xl glass p-6 text-center"
+                >
+                  <p className="text-4xl font-extrabold text-white sm:text-5xl">
+                    <Counter value={s.value} suffix={s.suffix} />
+                  </p>
+                  <p className="mt-2 text-xs font-medium uppercase tracking-wide text-slate-400">
+                    {s.label}
+                  </p>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+  );
+}
+
+/* -------------------------------------------------------------------------- */
+/*  Section: Pricing                                                           */
+/* -------------------------------------------------------------------------- */
+
+function PricingSection() {
+  return (
+    <section id="pricing" className="relative py-20 sm:py-28">
+      <GridGlow />
+      <div className="mx-auto max-w-7xl px-5 sm:px-8">
+        <SectionHeading
+          eyebrow="Pricing"
+          title={
+            <>
+              Choose the Plan That Fits Your{" "}
+              <span className="text-gradient">Growth Goals</span>
+            </>
+          }
+          subtitle="Start with a 7-day free trial. Upgrade anytime as your pipeline grows."
+        />
+
+        <div className="mx-auto mt-14 grid max-w-5xl gap-7 lg:grid-cols-2">
+          {plans.map((plan) => (
+            <article
+              key={plan.name}
+              data-animate
+              className={`relative flex flex-col rounded-3xl p-8 sm:p-10 ${
+                plan.highlight
+                  ? "border border-brand-400/40 bg-gradient-to-b from-brand-500/10 to-transparent glow-ring"
+                  : "glass"
+              }`}
+            >
+              {plan.badge && (
+                <span className="absolute -top-3 left-8 rounded-full bg-gradient-to-r from-brand-500 to-brand-400 px-4 py-1 text-xs font-semibold text-ink-950">
+                  {plan.badge}
+                </span>
+              )}
+              <h3 className="text-lg font-semibold text-white">{plan.name}</h3>
+              <div className="mt-4 flex items-baseline gap-1.5">
+                <span className="text-4xl font-extrabold text-white sm:text-5xl">{plan.price}</span>
+                {plan.cadence && <span className="text-sm text-slate-400">{plan.cadence}</span>}
+              </div>
+              <p className="mt-3 text-sm leading-relaxed text-slate-400">{plan.description}</p>
+
+              <p className="mt-6 text-xs font-semibold uppercase tracking-wide text-brand-300">
+                {plan.inherits}
+              </p>
+              <ul className="mt-4 flex-1 space-y-3">
+                {plan.features.map((f) => (
+                  <li key={f} className="flex items-start gap-3 text-sm text-slate-300">
+                    <Icon name="check" className="mt-0.5 h-4 w-4 shrink-0 text-brand-400" />
+                    {f}
+                  </li>
+                ))}
+              </ul>
+
+              <CTAButton
+                href="#cta"
+                variant={plan.highlight ? "primary" : "secondary"}
+                className="mt-8 w-full"
+                withArrow
+              >
+                {plan.cta}
+              </CTAButton>
+            </article>
+          ))}
+        </div>
+      </div>
+    </section>
+  );
+}
+
+/* -------------------------------------------------------------------------- */
+/*  Section: Final CTA                                                         */
+/* -------------------------------------------------------------------------- */
+
+function FinalCTA() {
+  return (
+    <section id="cta" className="relative py-20 sm:py-28">
+      <div className="mx-auto max-w-7xl px-5 sm:px-8">
+        <div className="relative overflow-hidden rounded-[2.5rem] border border-white/10 bg-gradient-to-br from-ink-800 via-ink-900 to-ink-950 px-7 py-16 text-center sm:px-16 sm:py-20">
+          <div
+            aria-hidden
+            className="absolute left-1/2 top-[-40%] h-96 w-96 -translate-x-1/2 rounded-full bg-brand-500/25 blur-[130px]"
+          />
+          <div className="relative mx-auto max-w-3xl">
+            <h2
+              data-animate
+              className="text-3xl font-bold leading-tight text-white sm:text-4xl md:text-5xl"
+            >
+              Ready to Grow Your <span className="text-gradient">Trucking Pipeline?</span>
+            </h2>
+            <p data-animate className="mt-5 text-lg font-medium text-brand-200">
+              Find Leads. Gain Intelligence. Grow Faster.
+            </p>
+            <p data-animate className="mx-auto mt-4 max-w-2xl text-base leading-relaxed text-slate-400">
+              Stop buying outdated lead lists. Start building relationships with verified trucking
+              companies using TruckMind.
+            </p>
+            <div data-animate className="mt-9 flex flex-col items-center justify-center gap-3 sm:flex-row">
+              <CTAButton href="#cta" withArrow>
+                Start Your Free Trial Today
+              </CTAButton>
+              <CTAButton href="#cta" variant="secondary">
+                Schedule a Personalized Demo
+              </CTAButton>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+  );
+}
+
+/* -------------------------------------------------------------------------- */
+/*  Footer                                                                     */
+/* -------------------------------------------------------------------------- */
+
+function Footer() {
+  const socials = ["LinkedIn", "Twitter", "Facebook"];
+  return (
+    <footer className="relative border-t border-white/10 bg-ink-950 py-14">
+      <div className="w-full px-5 sm:px-8 lg:px-12">
+        <div className="grid gap-10 md:grid-cols-[1.4fr_1fr_1fr_1.2fr]">
+          <div>
+            <a href="#top" className="flex items-center gap-2.5">
+              <span className="grid h-9 w-9 place-items-center rounded-xl bg-gradient-to-br from-brand-500 to-brand-600 text-ink-950">
+                <Icon name="truck" className="h-5 w-5" />
+              </span>
+              <span className="text-lg font-bold tracking-tight text-white">TruckMind</span>
+            </a>
+            <p className="mt-4 max-w-xs text-sm leading-relaxed text-slate-400">
+              The Trucking Growth Intelligence Platform — verified prospects, safety intelligence,
+              and compliance data in one place.
+            </p>
+            <div className="mt-5 flex gap-3">
+              {socials.map((s) => (
+                <a
+                  key={s}
+                  href="#cta"
+                  aria-label={s}
+                  className="grid h-9 w-9 place-items-center rounded-lg glass text-slate-300 transition-colors hover:text-white"
+                >
+                  <span className="text-xs font-semibold">{s[0]}</span>
+                </a>
+              ))}
+            </div>
+          </div>
+
+          {Object.entries(footerLinks).map(([heading, links]) => (
+            <div key={heading}>
+              <h3 className="text-sm font-semibold text-white">{heading}</h3>
+              <ul className="mt-4 space-y-2.5">
+                {links.map((link) => (
+                  <li key={link.label}>
+                    <a
+                      href={link.href}
+                      className="text-sm text-slate-400 transition-colors hover:text-white"
+                    >
+                      {link.label}
+                    </a>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          ))}
+
+          <div>
+            <h3 className="text-sm font-semibold text-white">Contact</h3>
+            <ul className="mt-4 space-y-2.5 text-sm text-slate-400">
+              <li>
+                <a href="mailto:sales@truckmind.com" className="transition-colors hover:text-white">
+                  sales@truckmind.com
+                </a>
+              </li>
+              <li>United States</li>
+            </ul>
+            <CTAButton href="#cta" className="mt-5 px-5 py-2.5 text-xs">
+              Start Free Trial
+            </CTAButton>
+          </div>
+        </div>
+
+        <div className="mt-12 flex flex-col items-center justify-between gap-4 border-t border-white/10 pt-7 sm:flex-row">
+          <p className="text-xs text-slate-500">
+            © {2026} TruckMind. All rights reserved.
+          </p>
+          <div className="flex gap-6 text-xs text-slate-500">
+            <a href="#cta" className="transition-colors hover:text-slate-300">
+              Privacy Policy
+            </a>
+            <a href="#cta" className="transition-colors hover:text-slate-300">
+              Terms of Service
+            </a>
+          </div>
+        </div>
+      </div>
+    </footer>
+  );
+}
+
+/* -------------------------------------------------------------------------- */
+/*  Root: animations + composition                                            */
+/* -------------------------------------------------------------------------- */
+
+export default function TruckMindLandingPage() {
+  const rootRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const prefersReduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    if (prefersReduced) return;
 
     const ctx = gsap.context(() => {
-      gsap.from(".nav-shell", {
-        y: -24,
-        opacity: 0,
-        duration: 0.75,
-        ease: "power3.out",
-      });
-
-      gsap.from(".hero-copy > *", {
-        y: 34,
+      // Hero entrance timeline
+      gsap.from("[data-hero]", {
+        y: 28,
         opacity: 0,
         duration: 0.9,
-        stagger: 0.11,
         ease: "power3.out",
+        stagger: 0.12,
+        delay: 0.1,
       });
 
-      gsap.from(".hero-visual", {
-        x: 50,
-        opacity: 0,
-        duration: 1.05,
-        ease: "power3.out",
+      // Reveal-on-scroll with stagger batching
+      ScrollTrigger.batch("[data-animate]", {
+        start: "top 88%",
+        once: true,
+        onEnter: (batch) =>
+          gsap.fromTo(
+            batch,
+            { y: 32, opacity: 0 },
+            {
+              y: 0,
+              opacity: 1,
+              duration: 0.8,
+              ease: "power3.out",
+              stagger: 0.09,
+              overwrite: true,
+            },
+          ),
       });
 
-      gsap.to(".hero-glow", {
-        scale: 1.18,
-        opacity: 0.72,
-        duration: 3,
-        repeat: -1,
-        yoyo: true,
-        ease: "sine.inOut",
-      });
-
-      gsap.utils.toArray<HTMLElement>(".reveal").forEach((el) => {
-        gsap.from(el, {
-          y: 42,
-          opacity: 0,
-          duration: 0.85,
-          ease: "power3.out",
-          scrollTrigger: {
-            trigger: el,
-            start: "top 84%",
-          },
-        });
-      });
-
-      gsap.utils.toArray<HTMLElement>(".stagger-scope").forEach((scope) => {
-        gsap.from(scope.querySelectorAll(".stagger-item"), {
-          y: 28,
-          opacity: 0,
-          duration: 0.65,
-          stagger: 0.075,
-          ease: "power3.out",
-          scrollTrigger: {
-            trigger: scope,
-            start: "top 82%",
-          },
-        });
-      });
-
-      gsap.to(".floating-card", {
-        y: -14,
-        duration: 2.7,
-        repeat: -1,
-        yoyo: true,
-        ease: "sine.inOut",
-      });
-
-      gsap.to(".fleet-image", {
-        yPercent: -8,
-        ease: "none",
-        scrollTrigger: {
-          trigger: ".fleet-section",
-          start: "top bottom",
-          end: "bottom top",
-          scrub: true,
-        },
-      });
+      ScrollTrigger.refresh();
     }, rootRef);
 
     return () => ctx.revert();
   }, []);
 
   return (
-    <div className="truckmind-page" ref={rootRef}>
-      <script type="application/ld+json">{JSON.stringify(softwareSchema)}</script>
-      <script type="application/ld+json">{JSON.stringify(faqSchema)}</script>
-
-      <style>{`
-        :root {
-          --bg: #050914;
-          --bg-2: #07111f;
-          --surface: rgba(10, 19, 34, 0.78);
-          --surface-solid: #0b1728;
-          --surface-2: #101f35;
-          --card: rgba(13, 24, 42, 0.72);
-          --card-2: rgba(19, 35, 58, 0.72);
-          --line: rgba(148, 163, 184, 0.16);
-          --line-strong: rgba(59, 130, 246, 0.42);
-          --text: #f8fafc;
-          --muted: #cbd5e1;
-          --soft: #94a3b8;
-          --dim: #64748b;
-          --blue: #2f7df6;
-          --blue-2: #60a5fa;
-          --cyan: #22d3ee;
-          --green: #22c55e;
-          --amber: #f59e0b;
-          --danger: #fb7185;
-          --radius: 24px;
-          --radius-lg: 34px;
-          --shadow: 0 28px 100px rgba(0, 0, 0, 0.42);
-          color-scheme: dark;
-        }
-
-        * {
-          box-sizing: border-box;
-        }
-
-        html {
-          scroll-behavior: smooth;
-        }
-
-        body {
-          margin: 0;
-          background: var(--bg);
-          color: var(--text);
-          font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-        }
-
-        .truckmind-page {
-          min-height: 100vh;
-          overflow: hidden;
-          background:
-            radial-gradient(circle at 16% 12%, rgba(47, 125, 246, 0.24), transparent 32%),
-            radial-gradient(circle at 82% 6%, rgba(34, 211, 238, 0.12), transparent 26%),
-            radial-gradient(circle at 50% 50%, rgba(15, 23, 42, 0.55), transparent 42%),
-            linear-gradient(180deg, #050914 0%, #07111f 42%, #050914 100%);
-        }
-
-        .truckmind-page::before {
-          content: "";
-          position: fixed;
-          inset: 0;
-          pointer-events: none;
-          background-image:
-            linear-gradient(rgba(255,255,255,0.028) 1px, transparent 1px),
-            linear-gradient(90deg, rgba(255,255,255,0.028) 1px, transparent 1px);
-          background-size: 58px 58px;
-          mask-image: linear-gradient(to bottom, rgba(0,0,0,0.65), transparent 78%);
-          z-index: 0;
-        }
-
-        a {
-          color: inherit;
-          text-decoration: none;
-        }
-
-        button,
-        input,
-        textarea {
-          font: inherit;
-        }
-
-        .container {
-          width: min(1180px, calc(100% - 40px));
-          margin: 0 auto;
-          position: relative;
-          z-index: 2;
-        }
-
-        .section {
-          padding: 96px 0;
-          position: relative;
-          z-index: 2;
-        }
-
-        .section-tight {
-          padding: 72px 0;
-        }
-
-        .nav-wrap {
-          position: fixed;
-          inset: 18px 0 auto 0;
-          z-index: 50;
-          pointer-events: none;
-        }
-
-        .nav-shell {
-          width: min(1180px, calc(100% - 40px));
-          margin: 0 auto;
-          pointer-events: auto;
-          display: flex;
-          align-items: center;
-          justify-content: space-between;
-          gap: 18px;
-          padding: 12px 14px 12px 16px;
-          border: 1px solid rgba(148, 163, 184, 0.18);
-          border-radius: 999px;
-          background: rgba(5, 9, 20, 0.72);
-          box-shadow: 0 18px 70px rgba(0,0,0,0.3);
-          backdrop-filter: blur(18px);
-        }
-
-        .brand {
-          display: inline-flex;
-          align-items: center;
-          gap: 10px;
-          font-weight: 850;
-          letter-spacing: -0.04em;
-          font-size: 1.08rem;
-        }
-
-        .brand-mark {
-          width: 36px;
-          height: 36px;
-          border-radius: 12px;
-          background:
-            linear-gradient(135deg, rgba(96,165,250,1), rgba(37,99,235,1));
-          display: grid;
-          place-items: center;
-          box-shadow: 0 12px 36px rgba(37,99,235,0.34);
-        }
-
-        .brand-mark svg {
-          width: 21px;
-          height: 21px;
-          fill: white;
-        }
-
-        .nav-links {
-          display: flex;
-          align-items: center;
-          gap: 26px;
-          color: var(--soft);
-          font-size: 0.9rem;
-        }
-
-        .nav-links a {
-          transition: color 180ms ease;
-        }
-
-        .nav-links a:hover {
-          color: var(--text);
-        }
-
-        .nav-actions {
-          display: flex;
-          align-items: center;
-          gap: 10px;
-        }
-
-        .btn {
-          border: 0;
-          cursor: pointer;
-          display: inline-flex;
-          align-items: center;
-          justify-content: center;
-          gap: 9px;
-          border-radius: 999px;
-          padding: 13px 19px;
-          font-weight: 760;
-          line-height: 1;
-          transition: transform 180ms ease, border-color 180ms ease, background 180ms ease, box-shadow 180ms ease;
-          white-space: nowrap;
-        }
-
-        .btn svg {
-          width: 17px;
-          height: 17px;
-          fill: currentColor;
-        }
-
-        .btn:hover {
-          transform: translateY(-2px);
-        }
-
-        .btn-primary {
-          background: linear-gradient(135deg, #3b82f6, #2563eb);
-          color: white;
-          box-shadow: 0 18px 46px rgba(37, 99, 235, 0.34);
-        }
-
-        .btn-primary:hover {
-          box-shadow: 0 24px 62px rgba(37, 99, 235, 0.46);
-        }
-
-        .btn-secondary {
-          border: 1px solid rgba(148, 163, 184, 0.22);
-          color: var(--text);
-          background: rgba(255,255,255,0.06);
-        }
-
-        .btn-secondary:hover {
-          border-color: rgba(96, 165, 250, 0.55);
-          background: rgba(96, 165, 250, 0.1);
-        }
-
-        .btn-small {
-          padding: 10px 14px;
-          font-size: 0.86rem;
-        }
-
-        .hero {
-          position: relative;
-          min-height: 100vh;
-          padding: 148px 0 80px;
-          display: flex;
-          align-items: center;
-        }
-
-        .hero-glow {
-          position: absolute;
-          width: 680px;
-          height: 680px;
-          right: -240px;
-          top: 30px;
-          border-radius: 999px;
-          background: radial-gradient(circle, rgba(47,125,246,0.28), rgba(34,211,238,0.08) 42%, transparent 68%);
-          filter: blur(12px);
-          z-index: 1;
-        }
-
-        .hero-grid {
-          display: grid;
-          grid-template-columns: minmax(0, 0.92fr) minmax(420px, 1.08fr);
-          gap: 58px;
-          align-items: center;
-        }
-
-        .eyebrow {
-          display: inline-flex;
-          align-items: center;
-          gap: 10px;
-          padding: 8px 12px;
-          border: 1px solid rgba(96, 165, 250, 0.26);
-          background: rgba(37, 99, 235, 0.1);
-          color: #bfdbfe;
-          border-radius: 999px;
-          font-size: 0.78rem;
-          font-weight: 760;
-          letter-spacing: 0.08em;
-          text-transform: uppercase;
-        }
-
-        .eyebrow-dot {
-          width: 8px;
-          height: 8px;
-          border-radius: 999px;
-          background: var(--green);
-          box-shadow: 0 0 0 7px rgba(34, 197, 94, 0.14);
-        }
-
-        h1,
-        h2,
-        h3,
-        p {
-          margin: 0;
-        }
-
-        h1 {
-          margin-top: 24px;
-          font-size: clamp(3rem, 6.5vw, 6.35rem);
-          line-height: 0.93;
-          letter-spacing: -0.078em;
-          max-width: 780px;
-        }
-
-        .gradient-text {
-          background: linear-gradient(135deg, #ffffff 12%, #bfdbfe 44%, #60a5fa 72%, #22d3ee 100%);
-          -webkit-background-clip: text;
-          background-clip: text;
-          color: transparent;
-        }
-
-        .hero-lead {
-          max-width: 650px;
-          margin-top: 25px;
-          color: var(--muted);
-          font-size: clamp(1.05rem, 1.45vw, 1.28rem);
-          line-height: 1.78;
-        }
-
-        .hero-actions {
-          display: flex;
-          gap: 14px;
-          align-items: center;
-          flex-wrap: wrap;
-          margin-top: 34px;
-        }
-
-        .hero-proof {
-          display: grid;
-          grid-template-columns: repeat(3, minmax(0, 1fr));
-          gap: 12px;
-          margin-top: 38px;
-          max-width: 660px;
-        }
-
-        .proof-card {
-          padding: 16px;
-          border: 1px solid rgba(148, 163, 184, 0.15);
-          border-radius: 18px;
-          background: rgba(255,255,255,0.045);
-        }
-
-        .proof-card strong {
-          display: block;
-          font-size: 1.38rem;
-          letter-spacing: -0.04em;
-        }
-
-        .proof-card span {
-          display: block;
-          margin-top: 3px;
-          color: var(--soft);
-          font-size: 0.83rem;
-          line-height: 1.35;
-        }
-
-        .hero-visual {
-          position: relative;
-          min-height: 610px;
-          border-radius: var(--radius-lg);
-        }
-
-        .hero-image-shell {
-          position: absolute;
-          inset: 0;
-          border-radius: var(--radius-lg);
-          overflow: hidden;
-          border: 1px solid rgba(96, 165, 250, 0.28);
-          background: #061020;
-          box-shadow: var(--shadow);
-        }
-
-        .hero-image-shell::after {
-          content: "";
-          position: absolute;
-          inset: 0;
-          background:
-            linear-gradient(90deg, rgba(5,9,20,0.3), transparent 44%),
-            linear-gradient(180deg, transparent 55%, rgba(5,9,20,0.78));
-        }
-
-        .hero-image {
-          width: 100%;
-          height: 100%;
-          object-fit: cover;
-          display: block;
-          transform: scale(1.04);
-        }
-
-        .floating-card {
-          position: absolute;
-          z-index: 3;
-          width: min(350px, 72%);
-          border-radius: 22px;
-          padding: 18px;
-          background: rgba(7, 17, 31, 0.78);
-          border: 1px solid rgba(148, 163, 184, 0.22);
-          box-shadow: 0 26px 72px rgba(0,0,0,0.42);
-          backdrop-filter: blur(18px);
-        }
-
-        .floating-card.top {
-          top: 42px;
-          left: -24px;
-        }
-
-        .floating-card.bottom {
-          right: -20px;
-          bottom: 42px;
-        }
-
-        .floating-label {
-          color: var(--soft);
-          font-size: 0.78rem;
-          margin-bottom: 10px;
-        }
-
-        .floating-title {
-          font-size: 1rem;
-          font-weight: 820;
-          letter-spacing: -0.025em;
-        }
-
-        .score-row {
-          display: flex;
-          align-items: center;
-          justify-content: space-between;
-          gap: 13px;
-          margin-top: 14px;
-          color: var(--muted);
-          font-size: 0.82rem;
-        }
-
-        .score-bar {
-          flex: 1;
-          height: 7px;
-          border-radius: 999px;
-          overflow: hidden;
-          background: rgba(148,163,184,0.18);
-        }
-
-        .score-bar span {
-          display: block;
-          height: 100%;
-          border-radius: 999px;
-          background: linear-gradient(90deg, #22c55e, #60a5fa);
-        }
-
-        .mini-list {
-          display: grid;
-          gap: 9px;
-          margin-top: 14px;
-        }
-
-        .mini-list div {
-          display: flex;
-          justify-content: space-between;
-          gap: 12px;
-          color: var(--soft);
-          font-size: 0.82rem;
-        }
-
-        .mini-list strong {
-          color: var(--text);
-        }
-
-        .section-header {
-          max-width: 760px;
-          margin-bottom: 42px;
-        }
-
-        .section-header.center {
-          margin-left: auto;
-          margin-right: auto;
-          text-align: center;
-        }
-
-        .section-kicker {
-          color: var(--blue-2);
-          font-size: 0.8rem;
-          font-weight: 850;
-          text-transform: uppercase;
-          letter-spacing: 0.13em;
-          margin-bottom: 16px;
-        }
-
-        h2 {
-          font-size: clamp(2.1rem, 4vw, 4rem);
-          line-height: 1.02;
-          letter-spacing: -0.058em;
-        }
-
-        .section-copy {
-          margin-top: 17px;
-          color: var(--muted);
-          font-size: 1.05rem;
-          line-height: 1.75;
-        }
-
-        .logos-row {
-          display: grid;
-          grid-template-columns: repeat(4, minmax(0, 1fr));
-          gap: 14px;
-        }
-
-        .logo-tile {
-          border: 1px solid rgba(148, 163, 184, 0.14);
-          border-radius: 18px;
-          padding: 18px;
-          background: rgba(255,255,255,0.04);
-          color: var(--soft);
-          text-align: center;
-          font-weight: 760;
-        }
-
-        .grid-4 {
-          display: grid;
-          grid-template-columns: repeat(4, minmax(0, 1fr));
-          gap: 16px;
-        }
-
-        .grid-3 {
-          display: grid;
-          grid-template-columns: repeat(3, minmax(0, 1fr));
-          gap: 18px;
-        }
-
-        .grid-2 {
-          display: grid;
-          grid-template-columns: repeat(2, minmax(0, 1fr));
-          gap: 22px;
-        }
-
-        .card {
-          border: 1px solid rgba(148, 163, 184, 0.15);
-          background:
-            linear-gradient(180deg, rgba(255,255,255,0.07), rgba(255,255,255,0.025));
-          border-radius: var(--radius);
-          padding: 24px;
-          box-shadow: 0 16px 70px rgba(0,0,0,0.18);
-        }
-
-        .card:hover {
-          border-color: rgba(96, 165, 250, 0.4);
-        }
-
-        .feature-check {
-          display: flex;
-          align-items: center;
-          gap: 10px;
-          color: var(--muted);
-          font-size: 0.95rem;
-          min-height: 28px;
-        }
-
-        .feature-check svg,
-        .feature-list-item svg {
-          width: 19px;
-          height: 19px;
-          min-width: 19px;
-          fill: var(--green);
-          border-radius: 999px;
-          background: rgba(34, 197, 94, 0.11);
-        }
-
-        .audience-card {
-          min-height: 188px;
-        }
-
-        .icon-box {
-          width: 48px;
-          height: 48px;
-          border-radius: 16px;
-          display: grid;
-          place-items: center;
-          background: rgba(47,125,246,0.13);
-          border: 1px solid rgba(96,165,250,0.26);
-          margin-bottom: 18px;
-        }
-
-        .icon-box svg {
-          width: 24px;
-          height: 24px;
-          fill: #93c5fd;
-        }
-
-        .card h3 {
-          font-size: 1.08rem;
-          letter-spacing: -0.025em;
-        }
-
-        .card p {
-          margin-top: 10px;
-          color: var(--soft);
-          line-height: 1.65;
-          font-size: 0.94rem;
-        }
-
-        .split-section {
-          display: grid;
-          grid-template-columns: minmax(0, 0.92fr) minmax(0, 1.08fr);
-          gap: 48px;
-          align-items: center;
-        }
-
-        .glass-panel {
-          border: 1px solid rgba(96,165,250,0.24);
-          background:
-            radial-gradient(circle at 15% 15%, rgba(59,130,246,0.24), transparent 32%),
-            linear-gradient(180deg, rgba(15, 23, 42, 0.84), rgba(7, 17, 31, 0.86));
-          border-radius: var(--radius-lg);
-          padding: 26px;
-          box-shadow: var(--shadow);
-        }
-
-        .search-demo {
-          border-radius: 23px;
-          overflow: hidden;
-          background: rgba(5, 9, 20, 0.78);
-          border: 1px solid rgba(148, 163, 184, 0.15);
-        }
-
-        .search-demo-header {
-          display: flex;
-          align-items: center;
-          gap: 10px;
-          padding: 16px;
-          border-bottom: 1px solid rgba(148,163,184,0.13);
-        }
-
-        .search-demo-header svg {
-          width: 18px;
-          height: 18px;
-          fill: var(--soft);
-        }
-
-        .fake-input {
-          flex: 1;
-          color: var(--dim);
-          font-size: 0.9rem;
-        }
-
-        .table-row {
-          display: grid;
-          grid-template-columns: 1.4fr 0.8fr 0.7fr 0.7fr;
-          gap: 14px;
-          padding: 15px 16px;
-          border-bottom: 1px solid rgba(148,163,184,0.1);
-          color: var(--muted);
-          font-size: 0.88rem;
-        }
-
-        .table-row.header {
-          color: var(--dim);
-          text-transform: uppercase;
-          letter-spacing: 0.1em;
-          font-size: 0.7rem;
-          font-weight: 850;
-        }
-
-        .status {
-          color: #86efac;
-        }
-
-        .pill-wrap {
-          display: flex;
-          flex-wrap: wrap;
-          gap: 10px;
-          margin-top: 30px;
-        }
-
-        .pill {
-          display: inline-flex;
-          align-items: center;
-          gap: 8px;
-          border: 1px solid rgba(148, 163, 184, 0.16);
-          background: rgba(255,255,255,0.045);
-          border-radius: 999px;
-          padding: 10px 13px;
-          color: var(--muted);
-          font-size: 0.9rem;
-        }
-
-        .pill::before {
-          content: "";
-          width: 7px;
-          height: 7px;
-          border-radius: 999px;
-          background: var(--blue-2);
-          box-shadow: 0 0 0 5px rgba(96,165,250,0.12);
-        }
-
-        .difference-grid {
-          display: grid;
-          grid-template-columns: 0.95fr 1.05fr;
-          gap: 40px;
-          align-items: start;
-        }
-
-        .feature-list {
-          display: grid;
-          gap: 14px;
-        }
-
-        .feature-list-item {
-          display: flex;
-          gap: 12px;
-          align-items: flex-start;
-          color: var(--muted);
-          line-height: 1.55;
-        }
-
-        .feature-list-item strong {
-          color: var(--text);
-          display: block;
-          margin-bottom: 2px;
-        }
-
-        .fleet-section {
-          position: relative;
-          overflow: hidden;
-          border-block: 1px solid rgba(148,163,184,0.13);
-          background: rgba(3,7,18,0.46);
-        }
-
-        .fleet-bg {
-          position: absolute;
-          inset: 0;
-          z-index: 0;
-        }
-
-        .fleet-image {
-          width: 100%;
-          height: 120%;
-          object-fit: cover;
-          opacity: 0.32;
-          filter: saturate(1.1) contrast(1.05);
-        }
-
-        .fleet-bg::after {
-          content: "";
-          position: absolute;
-          inset: 0;
-          background:
-            linear-gradient(90deg, #050914 0%, rgba(5,9,20,0.82) 38%, rgba(5,9,20,0.42) 100%),
-            linear-gradient(180deg, #050914 0%, transparent 18%, #050914 100%);
-        }
-
-        .safety-card {
-          display: grid;
-          grid-template-columns: 0.8fr 1.2fr;
-          gap: 28px;
-          align-items: center;
-        }
-
-        .score-circle {
-          width: 176px;
-          height: 176px;
-          border-radius: 999px;
-          margin: 0 auto;
-          display: grid;
-          place-items: center;
-          background:
-            radial-gradient(circle at center, #0b1728 0 56%, transparent 57%),
-            conic-gradient(#22c55e 0 78%, rgba(148,163,184,0.18) 78% 100%);
-          box-shadow: inset 0 0 42px rgba(34,197,94,0.18), 0 26px 80px rgba(0,0,0,0.3);
-        }
-
-        .score-circle strong {
-          font-size: 3rem;
-          letter-spacing: -0.08em;
-        }
-
-        .score-circle span {
-          display: block;
-          color: #86efac;
-          font-size: 0.82rem;
-          text-align: center;
-          margin-top: -8px;
-        }
-
-        .safety-list-grid {
-          display: grid;
-          grid-template-columns: repeat(2, minmax(0, 1fr));
-          gap: 12px;
-        }
-
-        .use-case-wrap {
-          display: flex;
-          flex-wrap: wrap;
-          gap: 10px;
-          margin-top: 24px;
-        }
-
-        .use-case {
-          padding: 10px 13px;
-          border-radius: 999px;
-          color: #dbeafe;
-          background: rgba(37, 99, 235, 0.14);
-          border: 1px solid rgba(96,165,250,0.24);
-          font-size: 0.88rem;
-          font-weight: 720;
-        }
-
-        .roi-card {
-          position: relative;
-          overflow: hidden;
-          text-align: center;
-          border-radius: 38px;
-          padding: 58px;
-          border: 1px solid rgba(96, 165, 250, 0.31);
-          background:
-            radial-gradient(circle at 50% -20%, rgba(37, 99, 235, 0.38), transparent 45%),
-            linear-gradient(180deg, rgba(15,23,42,0.9), rgba(7,17,31,0.78));
-          box-shadow: var(--shadow);
-        }
-
-        .roi-card h2 {
-          max-width: 850px;
-          margin: 0 auto;
-        }
-
-        .roi-card p {
-          max-width: 780px;
-          margin: 18px auto 0;
-          color: var(--muted);
-          line-height: 1.75;
-          font-size: 1.06rem;
-        }
-
-        .roi-list {
-          display: flex;
-          justify-content: center;
-          flex-wrap: wrap;
-          gap: 11px;
-          margin-top: 30px;
-        }
-
-        .pricing-card {
-          padding: 30px;
-          min-height: 100%;
-        }
-
-        .pricing-card.featured {
-          border-color: rgba(96,165,250,0.5);
-          background:
-            radial-gradient(circle at 25% 0%, rgba(37,99,235,0.22), transparent 38%),
-            linear-gradient(180deg, rgba(255,255,255,0.08), rgba(255,255,255,0.025));
-        }
-
-        .plan-top {
-          display: flex;
-          justify-content: space-between;
-          gap: 18px;
-          align-items: flex-start;
-          margin-bottom: 20px;
-        }
-
-        .badge {
-          display: inline-flex;
-          border-radius: 999px;
-          padding: 8px 11px;
-          color: #dbeafe;
-          background: rgba(37,99,235,0.14);
-          border: 1px solid rgba(96,165,250,0.24);
-          font-size: 0.75rem;
-          font-weight: 820;
-          white-space: nowrap;
-        }
-
-        .price {
-          margin-top: 16px;
-          font-size: clamp(2.1rem, 3vw, 3.3rem);
-          font-weight: 900;
-          letter-spacing: -0.07em;
-        }
-
-        .plan-features {
-          display: grid;
-          gap: 11px;
-          margin: 26px 0;
-        }
-
-        .faq-item {
-          padding: 24px;
-        }
-
-        .faq-item h3 {
-          font-size: 1rem;
-        }
-
-        .faq-item p {
-          color: var(--soft);
-          line-height: 1.7;
-        }
-
-        .cta-final {
-          text-align: center;
-          padding: 88px 0 104px;
-        }
-
-        .cta-final h2 {
-          max-width: 900px;
-          margin: 0 auto;
-        }
-
-        .cta-final p {
-          max-width: 650px;
-          margin: 18px auto 0;
-          color: var(--muted);
-          line-height: 1.75;
-        }
-
-        .footer {
-          border-top: 1px solid rgba(148,163,184,0.13);
-          padding: 30px 0;
-          color: var(--dim);
-          font-size: 0.9rem;
-        }
-
-        .footer .container {
-          display: flex;
-          justify-content: space-between;
-          align-items: center;
-          gap: 18px;
-          flex-wrap: wrap;
-        }
-
-        @media (max-width: 1080px) {
-          .hero-grid,
-          .split-section,
-          .difference-grid,
-          .safety-card {
-            grid-template-columns: 1fr;
-          }
-
-          .hero-visual {
-            min-height: 520px;
-          }
-
-          .grid-4 {
-            grid-template-columns: repeat(2, minmax(0, 1fr));
-          }
-
-          .grid-3 {
-            grid-template-columns: repeat(2, minmax(0, 1fr));
-          }
-
-          .nav-links {
-            display: none;
-          }
-        }
-
-        @media (max-width: 720px) {
-          .container,
-          .nav-shell {
-            width: min(100% - 24px, 1180px);
-          }
-
-          .nav-actions .btn-secondary {
-            display: none;
-          }
-
-          .hero {
-            padding-top: 128px;
-          }
-
-          .hero-proof,
-          .logos-row,
-          .grid-4,
-          .grid-3,
-          .grid-2,
-          .safety-list-grid {
-            grid-template-columns: 1fr;
-          }
-
-          .hero-visual {
-            min-height: 420px;
-          }
-
-          .floating-card {
-            width: calc(100% - 32px);
-            left: 16px !important;
-            right: 16px !important;
-          }
-
-          .floating-card.top {
-            top: 18px;
-          }
-
-          .floating-card.bottom {
-            bottom: 18px;
-          }
-
-          .table-row {
-            grid-template-columns: 1.2fr 0.8fr;
-          }
-
-          .table-row span:nth-child(3),
-          .table-row span:nth-child(4) {
-            display: none;
-          }
-
-          .roi-card {
-            padding: 34px 20px;
-            border-radius: 26px;
-          }
-
-          .section {
-            padding: 70px 0;
-          }
-
-          h1 {
-            font-size: clamp(2.75rem, 16vw, 4.8rem);
-          }
-
-          .hero-actions {
-            align-items: stretch;
-            flex-direction: column;
-          }
-
-          .btn {
-            width: 100%;
-          }
-        }
-      `}</style>
-
-      <header className="nav-wrap">
-        <nav className="nav-shell" aria-label="Primary navigation">
-          <a className="brand" href="#top" aria-label="TruckMind home">
-            <span className="brand-mark">
-              <svg viewBox="0 0 24 24" aria-hidden="true">
-                <path d="M4 19 12.2 4H20l-8.1 15H4Zm9.2 0 3.1-5.7H20L16.9 19h-3.7Z" />
-              </svg>
-            </span>
-            TruckMind
-          </a>
-
-          <div className="nav-links">
-            <a href="#prospects">Prospects</a>
-            <a href="#filters">Search</a>
-            <a href="#safety">Safety Reports</a>
-            <a href="#pricing">Pricing</a>
-          </div>
-
-          <div className="nav-actions">
-            <a className="btn btn-secondary btn-small" href="#demo">
-              Book Demo
-            </a>
-            <a className="btn btn-primary btn-small" href="#trial">
-              Start Free Trial
-            </a>
-          </div>
-        </nav>
-      </header>
-
-      <main id="top">
-        <section className="hero">
-          <div className="hero-glow" />
-          <div className="container hero-grid">
-            <div className="hero-copy">
-              <div className="eyebrow">
-                <span className="eyebrow-dot" />
-                Trucking Growth Intelligence Platform
-              </div>
-
-              <h1>
-                Get Verified Trucking Prospects,{" "}
-                <span className="gradient-text">Safety Intelligence</span> & Compliance Data.
-              </h1>
-
-              <p className="hero-lead">
-                TruckMind helps companies selling into the trucking industry identify, connect with, and convert more trucking companies using verified carrier contacts, FMCSA intelligence, compliance data, built-in CRM access, and on-demand carrier safety reports.
-              </p>
-
-              <div className="hero-actions" id="trial">
-                <a className="btn btn-primary" href="#demo">
-                  Start Your 7-Day Free Trial <ArrowIcon />
-                </a>
-                <a className="btn btn-secondary" href="#demo">
-                  Book Demo
-                </a>
-              </div>
-
-              <div className="hero-proof" aria-label="TruckMind value highlights">
-                <div className="proof-card">
-                  <strong>USA</strong>
-                  <span>Verified trucking companies across the country</span>
-                </div>
-                <div className="proof-card">
-                  <strong>MC + DOT</strong>
-                  <span>Carrier identifiers for smarter qualification</span>
-                </div>
-                <div className="proof-card">
-                  <strong>CRM</strong>
-                  <span>Built-in pipeline access for outreach teams</span>
-                </div>
-              </div>
-            </div>
-
-            <div className="hero-visual" aria-label="TruckMind digital freight intelligence visual">
-              <div className="hero-image-shell">
-                <img
-                  className="hero-image"
-                  src={IMAGE_PATHS.hero}
-                  alt="Futuristic truck with digital United States carrier intelligence network"
-                  loading="eager"
-                />
-              </div>
-
-              <div className="floating-card top">
-                <div className="floating-label">Carrier Intelligence Snapshot</div>
-                <div className="floating-title">Verified Prospect + Safety Context</div>
-                <div className="mini-list">
-                  <div>
-                    <span>MC / DOT</span>
-                    <strong>Verified</strong>
-                  </div>
-                  <div>
-                    <span>Operating Status</span>
-                    <strong className="status">Active</strong>
-                  </div>
-                  <div>
-                    <span>Fleet Visibility</span>
-                    <strong>Available</strong>
-                  </div>
-                </div>
-              </div>
-
-              <div className="floating-card bottom">
-                <div className="floating-label">Risk Intelligence</div>
-                <div className="floating-title">Safety Report Readiness</div>
-                <div className="score-row">
-                  <span>Compliance Signal</span>
-                  <div className="score-bar">
-                    <span style={{ width: "82%" }} />
-                  </div>
-                  <strong>82%</strong>
-                </div>
-                <div className="score-row">
-                  <span>Data Confidence</span>
-                  <div className="score-bar">
-                    <span style={{ width: "91%" }} />
-                  </div>
-                  <strong>91%</strong>
-                </div>
-              </div>
-            </div>
-          </div>
-        </section>
-
-        <section className="section section-tight">
-          <div className="container">
-            <div className="section-header center reveal">
-              <div className="section-kicker">Trusted By Businesses Serving The Trucking Industry</div>
-              <h2>Built for teams that need better trucking prospects, not outdated lead lists.</h2>
-              <p className="section-copy">
-                TruckMind gives sales, underwriting, compliance, and growth teams the intelligence they need to find the right carriers and take action faster.
-              </p>
-            </div>
-
-            <div className="logos-row stagger-scope" aria-label="Supported business categories">
-              {["Insurance", "Freight", "Compliance", "Technology"].map((item) => (
-                <div className="logo-tile stagger-item" key={item}>
-                  {item} Teams
-                </div>
-              ))}
-            </div>
-          </div>
-        </section>
-
-        <section className="section" id="prospects">
-          <div className="container">
-            <div className="section-header reveal">
-              <div className="section-kicker">Access Verified Trucking Companies Across The USA</div>
-              <h2>Carrier contacts, decision-makers, and intelligence from one platform.</h2>
-              <p className="section-copy">
-                Access verified trucking company contacts, owner details, phone numbers, email addresses, MC and DOT data, fleet information, location data, advanced search filters, built-in CRM access, and unlimited searches.
-              </p>
-            </div>
-
-            <div className="grid-4 stagger-scope">
-              {subscriptionFeatures.map((feature) => (
-                <div className="card feature-check stagger-item" key={feature}>
-                  <CheckIcon />
-                  <span>{feature}</span>
-                </div>
-              ))}
-            </div>
-          </div>
-        </section>
-
-        <section className="section section-tight">
-          <div className="container">
-            <div className="section-header center reveal">
-              <div className="section-kicker">Perfect For</div>
-              <h2>Purpose-built for companies selling into trucking.</h2>
-              <p className="section-copy">
-                Whether your company sells insurance, permits, compliance support, factoring, dispatch, fuel cards, or transportation technology, TruckMind helps you find and qualify the right trucking companies.
-              </p>
-            </div>
-
-            <div className="grid-4 stagger-scope">
-              {audiences.map((audience, index) => (
-                <article className="card audience-card stagger-item" key={audience.title}>
-                  <div className="icon-box">
-                    {index % 3 === 0 ? <ShieldIcon /> : index % 3 === 1 ? <SignalIcon /> : <SearchIcon />}
-                  </div>
-                  <h3>{audience.title}</h3>
-                  <p>{audience.description}</p>
-                </article>
-              ))}
-            </div>
-          </div>
-        </section>
-
-        <section className="section" id="filters">
-          <div className="container split-section">
-            <div className="reveal">
-              <div className="section-kicker">Find The Right Prospects In Seconds</div>
-              <h2>Build targeted trucking prospect lists in minutes.</h2>
-              <p className="section-copy">
-                Search and filter trucking companies by state, fleet size, authority age, MC number, DOT number, operating status, location, and carrier type instead of spending hours searching multiple sources.
-              </p>
-
-              <div className="pill-wrap">
-                {searchFilters.map((filter) => (
-                  <span className="pill" key={filter}>
-                    {filter}
-                  </span>
-                ))}
-              </div>
-            </div>
-
-            <div className="glass-panel reveal">
-              <div className="search-demo" aria-label="TruckMind prospect search interface preview">
-                <div className="search-demo-header">
-                  <SearchIcon />
-                  <div className="fake-input">Search carriers by company, MC, DOT, state, or location...</div>
-                  <a className="btn btn-primary btn-small" href="#demo">
-                    Search
-                  </a>
-                </div>
-
-                <div className="table-row header">
-                  <span>Carrier</span>
-                  <span>Fleet</span>
-                  <span>State</span>
-                  <span>Status</span>
-                </div>
-                {[
-                  ["Apex Freight Group", "42 Trucks", "TX", "Active"],
-                  ["Blue Ridge Carriers", "18 Trucks", "NC", "Active"],
-                  ["Iron Eagle Transport", "63 Trucks", "OH", "Review"],
-                  ["Coastal Haul Partners", "27 Trucks", "FL", "Active"],
-                ].map((row) => (
-                  <div className="table-row" key={row[0]}>
-                    {row.map((cell, index) => (
-                      <span className={index === 3 ? "status" : ""} key={cell}>
-                        {cell}
-                      </span>
-                    ))}
-                  </div>
-                ))}
-              </div>
-            </div>
-          </div>
-        </section>
-
-        <section className="section fleet-section" id="difference">
-          <div className="fleet-bg" aria-hidden="true">
-            <img className="fleet-image" src={IMAGE_PATHS.fleet} alt="" loading="lazy" />
-          </div>
-
-          <div className="container difference-grid">
-            <div className="reveal">
-              <div className="section-kicker">Why TruckMind Is Different</div>
-              <h2>More than contact data. Intelligence before the first call.</h2>
-              <p className="section-copy">
-                Most trucking lead providers only give you contact information. TruckMind helps you understand who you are contacting before you make the first call, so your team can focus on better opportunities and improve conversion rates.
-              </p>
-              <div className="hero-actions">
-                <a className="btn btn-primary" href="#pricing">
-                  Compare Plans <ArrowIcon />
-                </a>
-                <a className="btn btn-secondary" href="#safety">
-                  View Safety Reports
-                </a>
-              </div>
-            </div>
-
-            <div className="feature-list stagger-scope">
-              {differenceItems.map((item) => (
-                <div className="card feature-list-item stagger-item" key={item.title}>
-                  <CheckIcon />
-                  <div>
-                    <strong>{item.title}</strong>
-                    <span>{item.description}</span>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-        </section>
-
-        <section className="section" id="safety">
-          <div className="container">
-            <div className="section-header center reveal">
-              <div className="section-kicker">Need More Than Leads?</div>
-              <h2>Upgrade with detailed carrier safety reports.</h2>
-              <p className="section-copy">
-                For insurance agencies, brokers, compliance consultants, permit companies, and underwriting teams, understanding carrier risk is just as important as finding carrier contacts.
-              </p>
-            </div>
-
-            <div className="glass-panel safety-card reveal">
-              <div>
-                <div className="score-circle">
-                  <div>
-                    <strong>85</strong>
-                    <span>Safety Score</span>
-                  </div>
-                </div>
-                <p style={{ textAlign: "center", color: "#94a3b8", marginTop: 18, lineHeight: 1.6 }}>
-                  On-demand intelligence for carrier vetting, compliance reviews, risk assessments, underwriting, and broker due diligence.
-                </p>
-              </div>
-
-              <div>
-                <h3 style={{ fontSize: "1.45rem", letterSpacing: "-0.04em", marginBottom: 18 }}>
-                  Detailed Safety Reports Include
-                </h3>
-                <div className="safety-list-grid stagger-scope">
-                  {safetyReportFeatures.map((feature) => (
-                    <div className="feature-check stagger-item" key={feature}>
-                      <CheckIcon />
-                      <span>{feature}</span>
-                    </div>
-                  ))}
-                </div>
-
-                <div className="use-case-wrap">
-                  {safetyUseCases.map((item) => (
-                    <span className="use-case" key={item}>
-                      {item}
-                    </span>
-                  ))}
-                </div>
-              </div>
-            </div>
-          </div>
-        </section>
-
-        <section className="section section-tight">
-          <div className="container">
-            <div className="section-header center reveal">
-              <div className="section-kicker">One Platform. Multiple Growth Opportunities.</div>
-              <h2>Find leads, gain intelligence, and grow faster.</h2>
-            </div>
-
-            <div className="grid-4 stagger-scope">
-              {growthOpportunities.map((item, index) => (
-                <article className="card stagger-item" key={item.title}>
-                  <div className="icon-box">
-                    {index % 2 === 0 ? <SignalIcon /> : <ShieldIcon />}
-                  </div>
-                  <h3>{item.title}</h3>
-                  <p>{item.description}</p>
-                </article>
-              ))}
-            </div>
-          </div>
-        </section>
-
-        <section className="section">
-          <div className="container">
-            <div className="roi-card reveal">
-              <div className="section-kicker">The TruckMind ROI Case</div>
-              <h2>One new trucking client can pay for TruckMind many times over.</h2>
-              <p>
-                A single trucking customer can generate thousands of dollars in revenue through insurance, permits, compliance services, dispatch support, factoring, software solutions, and operational services. TruckMind helps you find those opportunities faster.
-              </p>
-
-              <div className="roi-list">
-                {roiBullets.map((item) => (
-                  <span className="pill" key={item}>
-                    {item}
-                  </span>
-                ))}
-              </div>
-            </div>
-          </div>
-        </section>
-
-        <section className="section" id="pricing">
-          <div className="container">
-            <div className="section-header center reveal">
-              <div className="section-kicker">Choose The Plan That Fits Your Growth Goals</div>
-              <h2>Simple plans for trucking growth, prospecting, and intelligence.</h2>
-            </div>
-
-            <div className="grid-2 stagger-scope">
-              {plans.map((plan, index) => (
-                <article className={`card pricing-card stagger-item ${index === 1 ? "featured" : ""}`} key={plan.name}>
-                  <div className="plan-top">
-                    <div>
-                      <h3>{plan.name}</h3>
-                      <div className="price">{plan.price}</div>
-                    </div>
-                    {plan.badge && <span className="badge">{plan.badge}</span>}
-                  </div>
-
-                  <p>{plan.description}</p>
-
-                  <div className="plan-features">
-                    {plan.features.map((feature) => (
-                      <div className="feature-check" key={feature}>
-                        <CheckIcon />
-                        <span>{feature}</span>
-                      </div>
-                    ))}
-                  </div>
-
-                  <a className={`btn ${index === 1 ? "btn-primary" : "btn-secondary"}`} href="#demo">
-                    {plan.cta} <ArrowIcon />
-                  </a>
-                </article>
-              ))}
-            </div>
-          </div>
-        </section>
-
-        <section className="section section-tight" id="faq">
-          <div className="container">
-            <div className="section-header center reveal">
-              <div className="section-kicker">FAQ</div>
-              <h2>Questions sales and compliance teams usually ask.</h2>
-            </div>
-
-            <div className="grid-2 stagger-scope">
-              {faqs.map((faq) => (
-                <article className="card faq-item stagger-item" key={faq.question}>
-                  <h3>{faq.question}</h3>
-                  <p>{faq.answer}</p>
-                </article>
-              ))}
-            </div>
-          </div>
-        </section>
-
-        <section className="cta-final" id="demo">
-          <div className="container reveal">
-            <div className="section-kicker">Ready To Grow Your Trucking Pipeline?</div>
-            <h2>Find leads. Gain intelligence. Grow faster.</h2>
-            <p>
-              Stop buying outdated lead lists. Start building relationships with verified trucking companies using TruckMind.
-            </p>
-            <div className="hero-actions" style={{ justifyContent: "center" }}>
-              <a className="btn btn-primary" href="mailto:sales@truckmind.com?subject=TruckMind%20Demo%20Request">
-                Start Your Free Trial Today <ArrowIcon />
-              </a>
-              <a className="btn btn-secondary" href="mailto:sales@truckmind.com?subject=TruckMind%20Personalized%20Demo">
-                Schedule A Personalized Demo
-              </a>
-            </div>
-          </div>
-        </section>
+    <div ref={rootRef} className="min-h-screen bg-ink-950 text-slate-200">
+      <Navbar />
+      <main>
+        <Hero />
+        <PlatformSection />
+        <BenefitsSection />
+        <AudienceSection />
+        <SearchSection />
+        <WhySection />
+        <SafetySection />
+        <GrowthSection />
+        <StatsSection />
+        <PricingSection />
+        <FinalCTA />
       </main>
-
-      <footer className="footer">
-        <div className="container">
-          <span>© {new Date().getFullYear()} TruckMind. Trucking Growth Intelligence Platform.</span>
-          <span>Verified Prospects · Safety Intelligence · Compliance Data</span>
-        </div>
-      </footer>
+      <Footer />
     </div>
   );
 }
-
-export default App;
