@@ -1,4 +1,11 @@
-import { useEffect, useRef, useState, type ReactNode } from "react";
+import {
+  createContext,
+  useContext,
+  useEffect,
+  useRef,
+  useState,
+  type ReactNode,
+} from "react";
 import { gsap } from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
 
@@ -23,6 +30,7 @@ type Plan = {
   badge?: string;
   inherits: string;
   features: string[];
+  bestFor: string;
   cta: string;
 };
 
@@ -39,6 +47,16 @@ type Stat = {
 const IMAGES = {
   hero: "/futuristic-truck.png",
 };
+
+/* External register/login page + contact details */
+const ACCOUNTS_URL = "https://truckmind.com/accounts";
+const CONTACT = {
+  email: "sales@truckmind.com",
+  phone: "+1 (555) 555-0100", // TODO: replace with the real phone number
+};
+
+/* Lets any CTA open the "Book a Demo" contact modal (provided at the root) */
+const DemoModalContext = createContext<() => void>(() => {});
 
 /* -------------------------------------------------------------------------- */
 /*  Content (sourced from provided business data)                             */
@@ -195,27 +213,76 @@ const stats: Stat[] = [
 
 const plans: Plan[] = [
   {
-    name: "Growth Plan",
-    price: "$499",
+    name: "Starter Plan",
+    price: "$99",
     cadence: "/month",
-    description: "Designed for growing sales teams that need larger outreach capabilities.",
-    highlight: true,
-    badge: "Most Popular",
-    inherits: "Everything in Starter, plus:",
+    description:
+      "Perfect for individuals and small teams getting started with trucking prospecting.",
+    inherits: "Includes",
     features: [
-      "Verified Trucking Company Database",
+      "Active Trucking Companies",
+      "Basic Carrier Profiles",
+      "Carrier Search",
       "Phone Numbers & Email Addresses",
       "MC & DOT Information",
-      "Fleet Information",
-      "Unlimited Searches",
-      "CRM Access",
-      "Advanced Search Filters",
-      "Ongoing Data Updates",
-      "Additional User Seats",
-      "Priority Support",
-      "Expanded Data Access",
-      "Lead Export Options",
+      "CRM Pipeline (Table View)",
+      "CSV Export — 350 Records/Month",
+      "Daily Export Limit of 110 Records",
+      "Email Support",
+      "7-Day Free Trial",
     ],
+    bestFor: "Insurance Agents • Permit Agents • Dispatch Providers",
+    cta: "Start Free Trial",
+  },
+  {
+    name: "Growth Plan",
+    price: "$199",
+    cadence: "/month",
+    description:
+      "Built for growing businesses that need more prospecting power and better targeting.",
+    inherits: "Everything in Starter, plus:",
+    features: [
+      "Unlimited Lead Searches",
+      "Advanced Search Filters",
+      "Fleet Information",
+      "Authority Verification",
+      "Insurance Expiry Tracking",
+      "Current Insurance Provider Data",
+      "Full Carrier Intelligence Profiles",
+      "CRM Pipeline (Kanban + Table View)",
+      "CSV Export — 1,000 Records/Month",
+      "Daily Export Limit of 300 Records",
+      "Priority Support",
+      "Multi-User Access (Up to 3 Users)",
+      "7-Day Free Trial",
+    ],
+    bestFor: "Freight Brokers • Factoring Companies • Compliance Consultants",
+    cta: "Start Free Trial",
+  },
+  {
+    name: "Professional Plan",
+    price: "$499",
+    cadence: "/month",
+    highlight: true,
+    badge: "Most Popular",
+    description: "The complete TruckMind Growth Intelligence Platform.",
+    inherits: "Everything in Growth, plus:",
+    features: [
+      "Unlimited Exports",
+      "Unlimited Searches",
+      "Unlimited Saved Searches",
+      "Advanced Carrier Intelligence",
+      "Compliance Indicators",
+      "Operating Status Monitoring",
+      "Growth Intelligence",
+      "AI-Powered Prospect Insights",
+      "Enhanced CRM Features",
+      "Up to 10 Team Members",
+      "Dedicated Customer Success Support",
+      "Priority Data Updates",
+      "API Access (Optional)",
+    ],
+    bestFor: "Sales Teams • Agencies • Enterprise Prospecting",
     cta: "Book Demo",
   },
   {
@@ -223,25 +290,32 @@ const plans: Plan[] = [
     price: "Custom",
     cadence: "pricing",
     description:
-      "For organizations requiring advanced carrier intelligence, safety analysis, and large-scale outreach.",
-    inherits: "Everything in Growth, plus:",
+      "Built for organizations requiring carrier vetting, safety analysis, underwriting intelligence, and large-scale outreach.",
+    inherits: "Everything in Professional, plus:",
     features: [
       "Detailed Carrier Safety Reports",
-      "FMCSA Safety Intelligence",
+      "FMCSA Safety Ratings",
       "CSA Score Analysis",
-      "Compliance Intelligence",
+      "Inspection History",
+      "Out-of-Service Rates",
+      "Fraud & Double Brokering Alerts",
       "Carrier Risk Assessments",
-      "Fraud & Double Brokering Insights",
-      "Bulk Email Campaign Capability",
+      "AI Underwriting Reports",
+      "Bulk Email Campaigns",
       "Dedicated Account Manager",
-      "Custom Data Requirements",
+      "Custom Integrations",
       "Team Training & Onboarding",
+      "Custom Data Requirements",
+      "White Label Reporting",
     ],
+    bestFor: "Insurance Companies • Underwriters • Brokerages • Risk Teams",
     cta: "Get a Quote",
   },
 ];
 
-const footerLinks = {
+type FooterLink = { label: string; href: string; action?: "demo" | "trial" };
+
+const footerLinks: Record<string, FooterLink[]> = {
   Platform: [
     { label: "Verified Leads", href: "#platform" },
     { label: "Carrier Intelligence", href: "#why" },
@@ -251,8 +325,8 @@ const footerLinks = {
   Company: [
     { label: "About", href: "#why" },
     { label: "Who It's For", href: "#audiences" },
-    { label: "Book a Demo", href: "#cta" },
-    { label: "Free Trial", href: "#cta" },
+    { label: "Book a Demo", href: "#cta", action: "demo" },
+    { label: "Free Trial", href: "#cta", action: "trial" },
   ],
 };
 
@@ -271,7 +345,10 @@ type IconName =
   | "target"
   | "check"
   | "truck"
-  | "arrow";
+  | "arrow"
+  | "mail"
+  | "phone"
+  | "close";
 
 function Icon({ name, className = "h-6 w-6" }: { name: IconName; className?: string }) {
   const common = {
@@ -358,6 +435,25 @@ function Icon({ name, className = "h-6 w-6" }: { name: IconName; className?: str
           <path d="M5 12h14M13 6l6 6-6 6" />
         </svg>
       );
+    case "mail":
+      return (
+        <svg {...common}>
+          <rect x="3" y="5" width="18" height="14" rx="2" />
+          <path d="m3 7 9 6 9-6" />
+        </svg>
+      );
+    case "phone":
+      return (
+        <svg {...common}>
+          <path d="M22 16.9v3a2 2 0 0 1-2.2 2 19.8 19.8 0 0 1-8.6-3.1 19.5 19.5 0 0 1-6-6A19.8 19.8 0 0 1 2 4.2 2 2 0 0 1 4 2h3a2 2 0 0 1 2 1.7c.1.9.3 1.8.6 2.6a2 2 0 0 1-.5 2.1L7.9 9.8a16 16 0 0 0 6 6l1.4-1.2a2 2 0 0 1 2.1-.5c.8.3 1.7.5 2.6.6a2 2 0 0 1 1.7 2Z" />
+        </svg>
+      );
+    case "close":
+      return (
+        <svg {...common}>
+          <path d="M6 6 18 18M18 6 6 18" />
+        </svg>
+      );
     case "check":
     default:
       return (
@@ -430,6 +526,9 @@ type CTAProps = {
   variant?: "primary" | "secondary" | "ghost";
   className?: string;
   withArrow?: boolean;
+  /** "trial" -> opens the accounts page in a new tab; "demo" -> opens the contact modal */
+  action?: "demo" | "trial";
+  onClick?: () => void;
 };
 
 function CTAButton({
@@ -438,9 +537,12 @@ function CTAButton({
   variant = "primary",
   className = "",
   withArrow,
+  action,
+  onClick,
 }: CTAProps) {
+  const openDemo = useContext(DemoModalContext);
   const base =
-    "group inline-flex items-center justify-center gap-2 rounded-full px-7 py-3.5 text-sm font-semibold transition-all duration-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-400 focus-visible:ring-offset-2 focus-visible:ring-offset-ink-950";
+    "group inline-flex cursor-pointer items-center justify-center gap-2 rounded-full px-7 py-3.5 text-sm font-semibold transition-all duration-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-400 focus-visible:ring-offset-2 focus-visible:ring-offset-ink-950";
   const variants = {
     primary:
       "bg-gradient-to-r from-brand-500 to-brand-400 text-ink-950 shadow-[0_12px_40px_-12px_rgba(14,165,233,0.7)] hover:shadow-[0_18px_50px_-12px_rgba(14,165,233,0.85)] hover:-translate-y-0.5",
@@ -448,8 +550,9 @@ function CTAButton({
       "glass text-white hover:bg-white/10 hover:-translate-y-0.5",
     ghost: "text-slate-300 hover:text-white",
   };
-  return (
-    <a href={href} className={`${base} ${variants[variant]} ${className}`}>
+  const cls = `${base} ${variants[variant]} ${className}`;
+  const inner = (
+    <>
       {children}
       {withArrow && (
         <Icon
@@ -457,7 +560,135 @@ function CTAButton({
           className="h-4 w-4 transition-transform duration-300 group-hover:translate-x-1"
         />
       )}
+    </>
+  );
+
+  // "Book a Demo" style — open the contact modal
+  if (action === "demo") {
+    return (
+      <button
+        type="button"
+        className={cls}
+        onClick={() => {
+          onClick?.();
+          openDemo();
+        }}
+      >
+        {inner}
+      </button>
+    );
+  }
+
+  // "Start Free Trial" style — go to the register/login page in a new tab
+  if (action === "trial") {
+    return (
+      <a
+        href={ACCOUNTS_URL}
+        target="_blank"
+        rel="noopener noreferrer"
+        className={cls}
+        onClick={onClick}
+      >
+        {inner}
+      </a>
+    );
+  }
+
+  return (
+    <a href={href} className={cls} onClick={onClick}>
+      {inner}
     </a>
+  );
+}
+
+/* -------------------------------------------------------------------------- */
+/*  Book-a-Demo contact modal                                                  */
+/* -------------------------------------------------------------------------- */
+
+function DemoModal({ open, onClose }: { open: boolean; onClose: () => void }) {
+  const closeRef = useRef<HTMLButtonElement>(null);
+
+  useEffect(() => {
+    if (!open) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") onClose();
+    };
+    document.addEventListener("keydown", onKey);
+    const prevOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    closeRef.current?.focus();
+    return () => {
+      document.removeEventListener("keydown", onKey);
+      document.body.style.overflow = prevOverflow;
+    };
+  }, [open, onClose]);
+
+  if (!open) return null;
+
+  const telHref = `tel:${CONTACT.phone.replace(/[^+\d]/g, "")}`;
+
+  return (
+    <div
+      role="dialog"
+      aria-modal="true"
+      aria-label="Book a demo"
+      onClick={onClose}
+      className="fixed inset-0 z-[60] flex items-center justify-center bg-ink-950/80 p-4 backdrop-blur-sm"
+    >
+      <div
+        onClick={(e) => e.stopPropagation()}
+        className="relative w-full max-w-md rounded-2xl glass glow-ring p-7"
+      >
+        <button
+          ref={closeRef}
+          type="button"
+          onClick={onClose}
+          aria-label="Close"
+          className="absolute right-4 top-4 grid h-9 w-9 place-items-center rounded-full text-slate-400 transition-colors hover:bg-white/10 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-400"
+        >
+          <Icon name="close" className="h-5 w-5" />
+        </button>
+
+        <span className="inline-flex items-center gap-2 rounded-full border border-brand-400/25 bg-brand-500/10 px-3.5 py-1 text-xs font-semibold uppercase tracking-[0.18em] text-brand-300">
+          Book a Demo
+        </span>
+        <h3 className="mt-4 text-2xl font-bold text-white">Talk to our team</h3>
+        <p className="mt-2 text-sm leading-relaxed text-slate-400">
+          Reach out and we&apos;ll walk you through TruckMind and get you set up.
+        </p>
+
+        <div className="mt-6 space-y-3">
+          <a
+            href={`mailto:${CONTACT.email}`}
+            className="flex items-center gap-3 rounded-xl border border-white/10 bg-ink-900/50 px-4 py-3 transition-colors hover:border-brand-400/30 hover:bg-white/5"
+          >
+            <span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-brand-500/15 text-brand-300 ring-1 ring-brand-400/25">
+              <Icon name="mail" className="h-5 w-5" />
+            </span>
+            <span className="min-w-0">
+              <span className="block text-xs uppercase tracking-wide text-slate-500">Email</span>
+              <span className="block truncate text-sm font-semibold text-white">
+                {CONTACT.email}
+              </span>
+            </span>
+          </a>
+          <a
+            href={telHref}
+            className="flex items-center gap-3 rounded-xl border border-white/10 bg-ink-900/50 px-4 py-3 transition-colors hover:border-brand-400/30 hover:bg-white/5"
+          >
+            <span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-accent-500/15 text-accent-400 ring-1 ring-accent-400/25">
+              <Icon name="phone" className="h-5 w-5" />
+            </span>
+            <span className="min-w-0">
+              <span className="block text-xs uppercase tracking-wide text-slate-500">Phone</span>
+              <span className="block truncate text-sm font-semibold text-white">
+                {CONTACT.phone}
+              </span>
+            </span>
+          </a>
+        </div>
+      </div>
+    </div>
   );
 }
 
@@ -540,11 +771,13 @@ function Navbar() {
         className="flex w-full items-center justify-between px-5 py-4 sm:px-8 lg:px-12"
         aria-label="Primary"
       >
-        <a href="#top" className="flex items-center gap-2.5">
-          <span className="grid h-9 w-9 place-items-center rounded-xl bg-gradient-to-br from-brand-500 to-brand-600 text-ink-950 shadow-[0_8px_24px_-8px_rgba(14,165,233,0.8)]">
-            <Icon name="truck" className="h-5 w-5" />
-          </span>
-          <span className="text-lg font-bold tracking-tight text-white">TruckMind</span>
+        <a href="#top" className="flex items-center" aria-label="TruckMind home">
+          <img
+            src="/logo.png"
+            alt="TruckMind"
+            className="h-9 w-auto"
+            style={{ filter: "invert(1) hue-rotate(180deg) saturate(1.45) brightness(1.05)" }}
+          />
         </a>
 
         <div className="hidden items-center gap-8 md:flex">
@@ -560,10 +793,10 @@ function Navbar() {
         </div>
 
         <div className="hidden items-center gap-3 md:flex">
-          <CTAButton href="#cta" variant="ghost" className="px-4 py-2">
+          <CTAButton action="demo" variant="ghost" className="px-4 py-2">
             Book Demo
           </CTAButton>
-          <CTAButton href="#cta" className="px-5 py-2.5">
+          <CTAButton action="trial" className="px-5 py-2.5">
             Start Free Trial
           </CTAButton>
         </div>
@@ -600,7 +833,7 @@ function Navbar() {
                 {link.label}
               </a>
             ))}
-            <CTAButton href="#cta" className="mt-3 w-full">
+            <CTAButton action="trial" className="mt-3 w-full" onClick={() => setOpen(false)}>
               Start Free Trial
             </CTAButton>
           </div>
@@ -627,7 +860,7 @@ function Hero() {
           alt=""
           fetchPriority="high"
           decoding="async"
-          className="h-full w-full object-cover object-center"
+          className="h-full w-full scale-105 object-cover object-center blur-[3px]"
         />
         {/* Lighter overlays: keep the truck visible while text stays legible */}
         <div className="absolute inset-0 bg-gradient-to-b from-ink-950/55 via-ink-950/35 to-ink-950" />
@@ -646,10 +879,13 @@ function Hero() {
 
         <h1
           data-hero
-          className="mx-auto mt-7 max-w-3xl text-4xl font-extrabold leading-[1.08] text-white drop-shadow-[0_2px_24px_rgba(0,0,0,0.5)] sm:text-5xl lg:text-6xl"
+          className="mx-auto mt-7 max-w-5xl text-[clamp(1.9rem,5vw,3.1875rem)] font-extrabold leading-[1.08] tracking-tight text-white drop-shadow-[0_2px_24px_rgba(0,0,0,0.5)]"
         >
-          Get Verified Trucking Prospects,{" "}
-          <span className="text-gradient">Safety Intelligence</span> &amp; Compliance Data
+          Get Verified Trucking Prospects,
+          <br />
+          <span className="text-gradient">Safety Intelligence</span> &amp;
+          <br />
+          Compliance Data
         </h1>
 
         <p
@@ -665,11 +901,11 @@ function Hero() {
           data-hero
           className="mt-9 flex flex-col items-center justify-center gap-3 sm:flex-row"
         >
-          <CTAButton href="#cta" withArrow>
+          <CTAButton action="trial" withArrow>
             Start Your 7-Day Free Trial
           </CTAButton>
-          <CTAButton href="#cta" variant="secondary">
-            Book Demo
+          <CTAButton href="#pricing" variant="secondary">
+            Compare Pricing
           </CTAButton>
         </div>
 
@@ -677,9 +913,6 @@ function Hero() {
           data-hero
           className="mt-8 flex flex-wrap items-center justify-center gap-x-6 gap-y-2 text-sm text-slate-400"
         >
-          <span className="flex items-center gap-2">
-            <Icon name="check" className="h-4 w-4 text-brand-400" /> No credit card required
-          </span>
           <span className="flex items-center gap-2">
             <Icon name="check" className="h-4 w-4 text-brand-400" /> Verified USA-wide data
           </span>
@@ -1087,6 +1320,13 @@ function StatsSection() {
 /* -------------------------------------------------------------------------- */
 
 function PricingSection() {
+  // Default selection = the "Most Popular" plan, else the first.
+  const defaultIndex = Math.max(
+    0,
+    plans.findIndex((p) => p.highlight),
+  );
+  const [selected, setSelected] = useState(defaultIndex);
+
   return (
     <section id="pricing" className="relative py-20 sm:py-28">
       <GridGlow />
@@ -1102,51 +1342,84 @@ function PricingSection() {
           subtitle="Start with a 7-day free trial. Upgrade anytime as your pipeline grows."
         />
 
-        <div className="mx-auto mt-14 grid max-w-5xl gap-7 lg:grid-cols-2">
-          {plans.map((plan) => (
-            <article
-              key={plan.name}
-              data-animate
-              className={`relative flex flex-col rounded-3xl p-8 sm:p-10 ${
-                plan.highlight
-                  ? "border border-brand-400/40 bg-gradient-to-b from-brand-500/10 to-transparent glow-ring"
-                  : "glass"
-              }`}
-            >
-              {plan.badge && (
-                <span className="absolute -top-3 left-8 rounded-full bg-gradient-to-r from-brand-500 to-brand-400 px-4 py-1 text-xs font-semibold text-ink-950">
-                  {plan.badge}
-                </span>
-              )}
-              <h3 className="text-lg font-semibold text-white">{plan.name}</h3>
-              <div className="mt-4 flex items-baseline gap-1.5">
-                <span className="text-4xl font-extrabold text-white sm:text-5xl">{plan.price}</span>
-                {plan.cadence && <span className="text-sm text-slate-400">{plan.cadence}</span>}
-              </div>
-              <p className="mt-3 text-sm leading-relaxed text-slate-400">{plan.description}</p>
-
-              <p className="mt-6 text-xs font-semibold uppercase tracking-wide text-brand-300">
-                {plan.inherits}
-              </p>
-              <ul className="mt-4 flex-1 space-y-3">
-                {plan.features.map((f) => (
-                  <li key={f} className="flex items-start gap-3 text-sm text-slate-300">
-                    <Icon name="check" className="mt-0.5 h-4 w-4 shrink-0 text-brand-400" />
-                    {f}
-                  </li>
-                ))}
-              </ul>
-
-              <CTAButton
-                href="#cta"
-                variant={plan.highlight ? "primary" : "secondary"}
-                className="mt-8 w-full"
-                withArrow
+        <div className="mt-14 grid items-stretch gap-5 sm:grid-cols-2 lg:grid-cols-4">
+          {plans.map((plan, i) => {
+            const isSelected = selected === i;
+            return (
+              <article
+                key={plan.name}
+                data-animate
+                role="button"
+                tabIndex={0}
+                aria-pressed={isSelected}
+                aria-label={`Select ${plan.name}`}
+                onClick={() => setSelected(i)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" || e.key === " ") {
+                    e.preventDefault();
+                    setSelected(i);
+                  }
+                }}
+                className={`relative flex cursor-pointer flex-col rounded-3xl p-6 outline-none transition-all duration-300 sm:p-7 ${
+                  isSelected
+                    ? "-translate-y-1 border-2 border-brand-400 bg-gradient-to-b from-brand-500/15 to-transparent glow-ring"
+                    : plan.highlight
+                      ? "border border-brand-400/40 bg-gradient-to-b from-brand-500/10 to-transparent hover:-translate-y-1"
+                      : "glass hover:-translate-y-1 hover:border-brand-400/30"
+                }`}
               >
-                {plan.cta}
-              </CTAButton>
-            </article>
-          ))}
+                {/* Badge / selected marker */}
+                {plan.badge && (
+                  <span className="absolute -top-3 left-6 rounded-full bg-gradient-to-r from-brand-500 to-brand-400 px-4 py-1 text-xs font-semibold text-ink-950">
+                    {plan.badge}
+                  </span>
+                )}
+                {isSelected && (
+                  <span className="absolute -top-3 right-6 inline-flex items-center gap-1 rounded-full bg-brand-400 px-3 py-1 text-xs font-semibold text-ink-950">
+                    <Icon name="check" className="h-3.5 w-3.5" />
+                    Selected
+                  </span>
+                )}
+
+                <h3 className="text-base font-semibold text-white">{plan.name}</h3>
+                <div className="mt-3 flex items-baseline gap-1.5">
+                  <span className="text-4xl font-extrabold text-white">{plan.price}</span>
+                  {plan.cadence && <span className="text-sm text-slate-400">{plan.cadence}</span>}
+                </div>
+                <p className="mt-3 min-h-[3.5rem] text-sm leading-relaxed text-slate-400">
+                  {plan.description}
+                </p>
+
+                <p className="mt-5 text-xs font-semibold uppercase tracking-wide text-brand-300">
+                  {plan.inherits}
+                </p>
+                <ul className="mt-4 flex-1 space-y-2.5">
+                  {plan.features.map((f) => (
+                    <li key={f} className="flex items-start gap-2.5 text-sm text-slate-300">
+                      <Icon name="check" className="mt-0.5 h-4 w-4 shrink-0 text-brand-400" />
+                      {f}
+                    </li>
+                  ))}
+                </ul>
+
+                <div className="mt-6 border-t border-white/10 pt-4">
+                  <p className="text-[11px] font-semibold uppercase tracking-wide text-slate-500">
+                    Best For
+                  </p>
+                  <p className="mt-1 text-xs leading-relaxed text-slate-400">{plan.bestFor}</p>
+                </div>
+
+                <CTAButton
+                  action={plan.cta.toLowerCase().includes("trial") ? "trial" : "demo"}
+                  variant={isSelected || plan.highlight ? "primary" : "secondary"}
+                  className="mt-6 w-full"
+                  withArrow
+                >
+                  {plan.cta}
+                </CTAButton>
+              </article>
+            );
+          })}
         </div>
       </div>
     </section>
@@ -1181,10 +1454,10 @@ function FinalCTA() {
               companies using TruckMind.
             </p>
             <div data-animate className="mt-9 flex flex-col items-center justify-center gap-3 sm:flex-row">
-              <CTAButton href="#cta" withArrow>
+              <CTAButton action="trial" withArrow>
                 Start Your Free Trial Today
               </CTAButton>
-              <CTAButton href="#cta" variant="secondary">
+              <CTAButton action="demo" variant="secondary">
                 Schedule a Personalized Demo
               </CTAButton>
             </div>
@@ -1200,24 +1473,29 @@ function FinalCTA() {
 /* -------------------------------------------------------------------------- */
 
 function Footer() {
-  const socials = ["LinkedIn", "Twitter", "Facebook"];
+  const openDemo = useContext(DemoModalContext);
+  const linkClass =
+    "text-sm text-slate-400 transition-colors hover:text-white";
   return (
     <footer className="relative border-t border-white/10 bg-ink-950 py-14">
       <div className="w-full px-5 sm:px-8 lg:px-12">
         <div className="grid gap-10 md:grid-cols-[1.4fr_1fr_1fr_1.2fr]">
           <div>
-            <a href="#top" className="flex items-center gap-2.5">
-              <span className="grid h-9 w-9 place-items-center rounded-xl bg-gradient-to-br from-brand-500 to-brand-600 text-ink-950">
-                <Icon name="truck" className="h-5 w-5" />
-              </span>
-              <span className="text-lg font-bold tracking-tight text-white">TruckMind</span>
+            <a href="#top" className="flex items-center" aria-label="TruckMind home">
+              <img
+                src="/logo.png"
+                alt="TruckMind"
+                className="h-10 w-auto"
+                style={{ filter: "invert(1) hue-rotate(180deg) saturate(1.45) brightness(1.05)" }}
+              />
             </a>
             <p className="mt-4 max-w-xs text-sm leading-relaxed text-slate-400">
               The Trucking Growth Intelligence Platform — verified prospects, safety intelligence,
               and compliance data in one place.
             </p>
-            <div className="mt-5 flex gap-3">
-              {socials.map((s) => (
+            <div className="mt-5 flex gap-3 text-sm text-slate-400">
+              17908 Murphy Pkwy, Lathrop, CA 95330
+              {/* {socials.map((s) => (
                 <a
                   key={s}
                   href="#cta"
@@ -1226,7 +1504,7 @@ function Footer() {
                 >
                   <span className="text-xs font-semibold">{s[0]}</span>
                 </a>
-              ))}
+              ))} */}
             </div>
           </div>
 
@@ -1236,12 +1514,24 @@ function Footer() {
               <ul className="mt-4 space-y-2.5">
                 {links.map((link) => (
                   <li key={link.label}>
-                    <a
-                      href={link.href}
-                      className="text-sm text-slate-400 transition-colors hover:text-white"
-                    >
-                      {link.label}
-                    </a>
+                    {link.action === "demo" ? (
+                      <button type="button" onClick={openDemo} className={`${linkClass} cursor-pointer`}>
+                        {link.label}
+                      </button>
+                    ) : link.action === "trial" ? (
+                      <a
+                        href={ACCOUNTS_URL}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className={linkClass}
+                      >
+                        {link.label}
+                      </a>
+                    ) : (
+                      <a href={link.href} className={linkClass}>
+                        {link.label}
+                      </a>
+                    )}
                   </li>
                 ))}
               </ul>
@@ -1258,7 +1548,7 @@ function Footer() {
               </li>
               <li>United States</li>
             </ul>
-            <CTAButton href="#cta" className="mt-5 px-5 py-2.5 text-xs">
+            <CTAButton action="trial" className="mt-5 px-5 py-2.5 text-xs">
               Start Free Trial
             </CTAButton>
           </div>
@@ -1288,6 +1578,7 @@ function Footer() {
 
 export default function TruckMindLandingPage() {
   const rootRef = useRef<HTMLDivElement>(null);
+  const [demoOpen, setDemoOpen] = useState(false);
 
   useEffect(() => {
     const prefersReduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
@@ -1330,22 +1621,25 @@ export default function TruckMindLandingPage() {
   }, []);
 
   return (
-    <div ref={rootRef} className="min-h-screen bg-ink-950 text-slate-200">
-      <Navbar />
-      <main>
-        <Hero />
-        <PlatformSection />
-        <BenefitsSection />
-        <AudienceSection />
-        <SearchSection />
-        <WhySection />
-        <SafetySection />
-        <GrowthSection />
-        <StatsSection />
-        <PricingSection />
-        <FinalCTA />
-      </main>
-      <Footer />
-    </div>
+    <DemoModalContext.Provider value={() => setDemoOpen(true)}>
+      <div ref={rootRef} className="min-h-screen bg-ink-950 text-slate-200">
+        <Navbar />
+        <main>
+          <Hero />
+          <PlatformSection />
+          <BenefitsSection />
+          <AudienceSection />
+          <SearchSection />
+          <WhySection />
+          <SafetySection />
+          <GrowthSection />
+          <StatsSection />
+          <PricingSection />
+          <FinalCTA />
+        </main>
+        <Footer />
+      </div>
+      <DemoModal open={demoOpen} onClose={() => setDemoOpen(false)} />
+    </DemoModalContext.Provider>
   );
 }
