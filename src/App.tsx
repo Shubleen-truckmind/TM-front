@@ -41,11 +41,15 @@ type Stat = {
 };
 
 /* -------------------------------------------------------------------------- */
-/*  Asset paths (served from /public)                                          */
+/*  Asset paths (served from /public — prefixed with Vite's base URL so the    */
+/*  bundle is portable across mount points, e.g. mounted at /landing/ inside   */
+/*  TMind V2).                                                                 */
 /* -------------------------------------------------------------------------- */
 
+const ASSET_BASE = import.meta.env.BASE_URL;
 const IMAGES = {
-  hero: "/futuristic-truck.png",
+  hero: `${ASSET_BASE}futuristic-truck.png`,
+  logo: `${ASSET_BASE}logo.png`,
 };
 
 /* External register/login page + contact details */
@@ -773,7 +777,7 @@ function Navbar() {
       >
         <a href="#top" className="flex items-center" aria-label="TruckMind home">
           <img
-            src="/logo.png"
+            src={IMAGES.logo}
             alt="TruckMind"
             className="h-9 w-auto"
             style={{ filter: "invert(1) hue-rotate(180deg) saturate(1.45) brightness(1.05)" }}
@@ -1496,7 +1500,7 @@ function Footer() {
           <div>
             <a href="#top" className="flex items-center" aria-label="TruckMind home">
               <img
-                src="/logo.png"
+                src={IMAGES.logo}
                 alt="TruckMind"
                 className="h-10 w-auto"
                 style={{ filter: "invert(1) hue-rotate(180deg) saturate(1.45) brightness(1.05)" }}
