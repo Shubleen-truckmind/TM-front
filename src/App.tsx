@@ -222,10 +222,10 @@ const plans: Plan[] = [
     features: [
       "Active Trucking Companies",
       "Basic Carrier Profiles",
-      "Carrier Search",
+      "Carrier Search (Filter by Insurance Renewal Date)",
       "Phone Numbers & Email Addresses",
       "MC & DOT Information",
-      "CRM Pipeline (Table View)",
+      "CRM Pipeline",
       "CSV Export — 350 Records/Month",
       "Daily Export Limit of 110 Records",
       "Email Support",
@@ -249,9 +249,9 @@ const plans: Plan[] = [
       "Insurance Expiry Tracking",
       "Current Insurance Provider Data",
       "Full Carrier Intelligence Profiles",
-      "CRM Pipeline (Kanban + Table View)",
+      "CRM Pipeline",
       "CSV Export — 1,000 Records/Month",
-      "Daily Export Limit of 300 Records",
+      "Daily Export Limit of 350 Records",
       "Priority Support",
       "Multi-User Access (Up to 3 Users)",
       "7-Day Free Trial",
@@ -1394,12 +1394,25 @@ function PricingSection() {
                   {plan.inherits}
                 </p>
                 <ul className="mt-4 flex-1 space-y-2.5">
-                  {plan.features.map((f) => (
-                    <li key={f} className="flex items-start gap-2.5 text-sm text-slate-300">
-                      <Icon name="check" className="mt-0.5 h-4 w-4 shrink-0 text-brand-400" />
-                      {f}
-                    </li>
-                  ))}
+                  {plan.features.map((f) => {
+                    const marker = "(Filter by Insurance Renewal Date)";
+                    const highlighted = f.includes(marker);
+                    return (
+                      <li key={f} className="flex items-start gap-2.5 text-sm text-slate-300">
+                        <Icon name="check" className="mt-0.5 h-4 w-4 shrink-0 text-brand-400" />
+                        {highlighted ? (
+                          <span>
+                            {f.replace(marker, "").trim()}{" "}
+                            <span className="rounded bg-amber-400/15 px-1 font-semibold text-amber-300">
+                              {marker}
+                            </span>
+                          </span>
+                        ) : (
+                          f
+                        )}
+                      </li>
+                    );
+                  })}
                 </ul>
 
                 <div className="mt-6 border-t border-white/10 pt-4">
